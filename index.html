@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>地牢探险 Dungeon Crawler</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -107,6 +107,7 @@
     background: var(--panel);
     border-top: 1px solid var(--border);
     padding: 8px 12px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -857,7 +858,14 @@ let cellsX = 0, cellsY = 0;
 function resizeCanvas() {
   const vp = document.getElementById('viewport');
   const w = vp.clientWidth  || window.innerWidth;
-  const h = vp.clientHeight || (window.innerHeight - 200);
+  let h = vp.clientHeight;
+  if (!h) {
+    const hud      = document.getElementById('hud');
+    const msglog   = document.getElementById('msglog');
+    const controls = document.getElementById('controls');
+    const usedH = (hud?.offsetHeight||0) + (msglog?.offsetHeight||0) + (controls?.offsetHeight||0);
+    h = Math.max(100, window.innerHeight - usedH);
+  }
   if (w === 0 || h === 0) return; // layout not ready yet
   vpW = w; vpH = h;
   canvas.width = vpW; canvas.height = vpH;
@@ -868,8 +876,8 @@ function resizeCanvas() {
 
 function updateCamera() {
   const p = G.player;
-  camX = Math.max(0, Math.min(p.x - Math.floor(cellsX/2), MAP_W - cellsX));
-  camY = Math.max(0, Math.min(p.y - Math.floor(cellsY/2), MAP_H - cellsY));
+  camX = Math.max(0, Math.min(p.x - Math.floor(cellsX/2), Math.max(0, MAP_W - cellsX)));
+  camY = Math.max(0, Math.min(p.y - Math.floor(cellsY/2), Math.max(0, MAP_H - cellsY)));
 }
 
 function render() {
@@ -1144,9 +1152,10 @@ function weightedChoice(arr, ws) {
 // ══════════════════════════════════════════════════════
 function fixLayout() {
   document.getElementById('app').style.height = window.innerHeight + 'px';
+  setTimeout(resizeCanvas, 50);
 }
 window.addEventListener('resize', () => { fixLayout(); });
-window.addEventListener('orientationchange', () => { setTimeout(fixLayout, 300); });
+window.addEventListener('orientationchange', () => { setTimeout(fixLayout, 400); });
 
 // ResizeObserver fires AFTER the browser truly finishes layout,
 // so clientHeight is always correct — no timing hacks needed.
