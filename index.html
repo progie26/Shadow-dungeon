@@ -1004,8 +1004,6 @@ function startGame() {
   document.getElementById('titleScreen').style.display = 'none';
   document.getElementById('deathScreen').classList.remove('show');
   document.getElementById('winScreen').classList.remove('show');
-  fixLayout();
-  resizeCanvas();
 
   messages.length = 0;
 
@@ -1026,12 +1024,16 @@ function startGame() {
     fov: new Set(),
   };
 
-  loadFloor(1);
-  addMsg('⚔ 欢迎来到地牢！用 > 下楼，G 拾取物品', 'yellow');
-  addMsg('消灭怪物获取经验，找到宝藏变强！', 'cyan');
-  render();
-  updateHud();
-  renderMessages();
+  fixLayout();
+  requestAnimationFrame(() => {
+    resizeCanvas();
+    loadFloor(1);
+    addMsg('⚔ 欢迎来到地牢！用 > 下楼，G 拾取物品', 'yellow');
+    addMsg('消灭怪物获取经验，找到宝藏变强！', 'cyan');
+    render();
+    updateHud();
+    renderMessages();
+  });
 }
 
 function showDeath() {
@@ -1150,8 +1152,10 @@ window.addEventListener('orientationchange', () => { setTimeout(() => { fixLayou
 // Wait for layout to settle before sizing canvas and starting
 window.addEventListener('load', () => {
   fixLayout();
-  resizeCanvas();
-  document.getElementById('titleScreen').style.display = 'flex';
+  requestAnimationFrame(() => {
+    resizeCanvas();
+    document.getElementById('titleScreen').style.display = 'flex';
+  });
 });
 </script>
 </body>
