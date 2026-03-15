@@ -856,7 +856,10 @@ let cellsX = 0, cellsY = 0;
 
 function resizeCanvas() {
   const vp = document.getElementById('viewport');
-  vpW = vp.clientWidth; vpH = vp.clientHeight;
+  const w = vp.clientWidth  || window.innerWidth;
+  const h = vp.clientHeight || (window.innerHeight - 200);
+  if (w === 0 || h === 0) return; // layout not ready yet
+  vpW = w; vpH = h;
   canvas.width = vpW; canvas.height = vpH;
   cellsX = Math.ceil(vpW / CELL) + 1;
   cellsY = Math.ceil(vpH / CELL) + 1;
@@ -1024,16 +1027,12 @@ function startGame() {
     fov: new Set(),
   };
 
-  fixLayout();
-  requestAnimationFrame(() => {
-    resizeCanvas();
-    loadFloor(1);
-    addMsg('⚔ 欢迎来到地牢！用 > 下楼，G 拾取物品', 'yellow');
-    addMsg('消灭怪物获取经验，找到宝藏变强！', 'cyan');
-    render();
-    updateHud();
-    renderMessages();
-  });
+  loadFloor(1);
+  addMsg('⚔ 欢迎来到地牢！用 > 下楼，G 拾取物品', 'yellow');
+  addMsg('消灭怪物获取经验，找到宝藏变强！', 'cyan');
+  render();
+  updateHud();
+  renderMessages();
 }
 
 function showDeath() {
@@ -1146,17 +1145,22 @@ function weightedChoice(arr, ws) {
 function fixLayout() {
   document.getElementById('app').style.height = window.innerHeight + 'px';
 }
-window.addEventListener('resize', () => { fixLayout(); resizeCanvas(); });
-window.addEventListener('orientationchange', () => { setTimeout(() => { fixLayout(); resizeCanvas(); }, 300); });
+window.addEventListener('resize', () => { fixLayout(); });
+window.addEventListener('orientationchange', () => { setTimeout(fixLayout, 300); });
 
-// Wait for layout to settle before sizing canvas and starting
-window.addEventListener('load', () => {
-  fixLayout();
-  requestAnimationFrame(() => {
-    resizeCanvas();
+// ResizeObserver fires AFTER the browser truly finishes layout,
+// so clientHeight is always correct — no timing hacks needed.
+let titleShown = false;
+new ResizeObserver(() => {
+  resizeCanvas();
+  if (!titleShown) {
+    titleShown = true;
     document.getElementById('titleScreen').style.display = 'flex';
-  });
-});
+  }
+}).observe(document.getElementById('viewport'));
+
+// Kick off layout on load
+window.addEventListener('load', fixLayout);
 </script>
 </body>
 </html>
