@@ -26,13 +26,17 @@
     color: var(--white);
     font-family: 'Courier New', monospace;
     height: 100%;
+    height: -webkit-fill-available;
     overflow: hidden;
     touch-action: none;
   }
 
   #app {
+    display: -webkit-flex;
     display: flex;
+    -webkit-flex-direction: column;
     flex-direction: column;
+    height: 100vh;
     height: 100dvh;
     max-width: 900px;
     margin: 0 auto;
@@ -224,10 +228,17 @@
 
   /* Title / Death / Win */
   #titleScreen {
-    position: fixed; inset: 0;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: var(--bg);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-justify-content: center;
+    justify-content: center;
     z-index: 200; padding: 24px;
     text-align: center;
   }
@@ -1128,11 +1139,22 @@ function weightedChoice(arr, ws) {
 // ══════════════════════════════════════════════════════
 //  BOOT
 // ══════════════════════════════════════════════════════
-window.addEventListener('resize', resizeCanvas);
+// Fix iOS Safari viewport height
+function fixVh() {
+  const vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--real-vh', `${vh}px`);
+  document.getElementById('app').style.height = window.innerHeight + 'px';
+}
+fixVh();
+window.addEventListener('resize', () => { fixVh(); resizeCanvas(); });
+window.addEventListener('orientationchange', () => { setTimeout(() => { fixVh(); resizeCanvas(); }, 300); });
+
 resizeCanvas();
-// Canvas starts with title screen; init colors etc.
 ctx.fillStyle='#0a0a0f';
 ctx.fillRect(0,0,vpW,vpH);
+
+// Ensure title screen is visible on load
+document.getElementById('titleScreen').style.display = 'flex';
 </script>
 </body>
 </html>
