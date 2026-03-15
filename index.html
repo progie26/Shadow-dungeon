@@ -1004,6 +1004,8 @@ function startGame() {
   document.getElementById('titleScreen').style.display = 'none';
   document.getElementById('deathScreen').classList.remove('show');
   document.getElementById('winScreen').classList.remove('show');
+  fixLayout();
+  resizeCanvas();
 
   messages.length = 0;
 
@@ -1139,22 +1141,18 @@ function weightedChoice(arr, ws) {
 // ══════════════════════════════════════════════════════
 //  BOOT
 // ══════════════════════════════════════════════════════
-// Fix iOS Safari viewport height
-function fixVh() {
-  const vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--real-vh', `${vh}px`);
+function fixLayout() {
   document.getElementById('app').style.height = window.innerHeight + 'px';
 }
-fixVh();
-window.addEventListener('resize', () => { fixVh(); resizeCanvas(); });
-window.addEventListener('orientationchange', () => { setTimeout(() => { fixVh(); resizeCanvas(); }, 300); });
+window.addEventListener('resize', () => { fixLayout(); resizeCanvas(); });
+window.addEventListener('orientationchange', () => { setTimeout(() => { fixLayout(); resizeCanvas(); }, 300); });
 
-resizeCanvas();
-ctx.fillStyle='#0a0a0f';
-ctx.fillRect(0,0,vpW,vpH);
-
-// Ensure title screen is visible on load
-document.getElementById('titleScreen').style.display = 'flex';
+// Wait for layout to settle before sizing canvas and starting
+window.addEventListener('load', () => {
+  fixLayout();
+  resizeCanvas();
+  document.getElementById('titleScreen').style.display = 'flex';
+});
 </script>
 </body>
 </html>
