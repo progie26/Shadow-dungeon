@@ -1,1180 +1,1770 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>地牢探险 Dungeon Crawler</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>暗影地牢 - Shadow Dungeon</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --panel: #11131a;
+      --panel-2: #171a24;
+      --edge: #2a3143;
+      --text: #e7ebf7;
+      --muted: #7d889f;
+      --gold: #f0c75f;
+      --danger: #ff5b66;
+      --ok: #55d489;
+      --mana: #5bb5ff;
+      --xp: #a777ff;
+      --cell: 20px;
+    }
 
-  :root {
-    --bg: #0a0a0f;
-    --panel: #12121a;
-    --border: #2a2a3a;
-    --gold: #f5c518;
-    --red: #e84545;
-    --green: #4caf50;
-    --cyan: #26c6da;
-    --purple: #ab47bc;
-    --white: #e0e0e0;
-    --dim: #555;
-    --cell: 20px;
-  }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body {
-    background: var(--bg);
-    color: var(--white);
-    font-family: 'Courier New', monospace;
-    height: 100%;
-    height: -webkit-fill-available;
-    overflow: hidden;
-    touch-action: none;
-  }
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 20% 10%, #181b28 0%, #0a0a0f 55%, #05060a 100%);
+      color: var(--text);
+      font-family: "Consolas", "SF Mono", "Menlo", monospace;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
-  #app {
-    display: -webkit-flex;
-    display: flex;
-    -webkit-flex-direction: column;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
-    max-width: 900px;
-    margin: 0 auto;
-  }
+    #app {
+      width: min(980px, 100vw);
+      height: 100dvh;
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto 1fr auto auto;
+      border-left: 1px solid #1c2130;
+      border-right: 1px solid #1c2130;
+      background: linear-gradient(180deg, rgba(17, 19, 26, 0.9) 0%, rgba(10, 10, 15, 0.95) 100%);
+      position: relative;
+    }
 
-  /* ── HUD ── */
-  #hud {
-    flex-shrink: 0;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    padding: 6px 10px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px 16px;
-    font-size: 12px;
-  }
-  .hud-row { display: flex; align-items: center; gap: 6px; }
-  .hud-label { color: var(--dim); min-width: 28px; }
-  .bar-wrap { flex: 1; background: #222; border-radius: 3px; height: 10px; overflow: hidden; }
-  .bar { height: 100%; border-radius: 3px; transition: width .2s; }
-  .bar-hp  { background: var(--red); }
-  .bar-mp  { background: var(--cyan); }
-  .bar-xp  { background: var(--purple); }
-  .hud-val { min-width: 50px; font-size: 11px; }
-  .hud-stat { color: var(--gold); }
-  .floor-badge {
-    grid-column: 1/-1;
-    text-align: center;
-    font-size: 11px;
-    color: var(--purple);
-    letter-spacing: 1px;
-  }
+    #hud {
+      padding: 8px 10px;
+      background: linear-gradient(180deg, #181d2b 0%, #121621 100%);
+      border-bottom: 1px solid var(--edge);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+      font-size: 12px;
+    }
 
-  /* ── Canvas ── */
-  #viewport {
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-    cursor: default;
-  }
-  #gameCanvas {
-    display: block;
-    image-rendering: pixelated;
-    width: 100%;
-    height: 100%;
-  }
+    .row { display: flex; align-items: center; gap: 6px; }
+    .bar-wrap {
+      flex: 1;
+      height: 10px;
+      background: #22293a;
+      border: 1px solid #2d3650;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar {
+      height: 100%;
+      transition: width 120ms linear;
+    }
+    .ghost {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.45);
+      transition: width 320ms ease-out;
+    }
 
-  /* ── Message Log ── */
-  #msglog {
-    flex-shrink: 0;
-    background: var(--panel);
-    border-top: 1px solid var(--border);
-    padding: 4px 10px;
-    height: 68px;
-    overflow: hidden;
-    font-size: 11px;
-    line-height: 1.5;
-  }
-  .msg { opacity: 0.9; }
-  .msg-red    { color: var(--red); }
-  .msg-green  { color: var(--green); }
-  .msg-yellow { color: var(--gold); }
-  .msg-cyan   { color: var(--cyan); }
-  .msg-purple { color: var(--purple); }
-  .msg-white  { color: var(--white); }
+    #viewport {
+      position: relative;
+      overflow: hidden;
+      background: #08090f;
+    }
 
-  /* ── Mobile D-Pad ── */
-  #controls {
-    flex-shrink: 0;
-    background: var(--panel);
-    border-top: 1px solid var(--border);
-    padding: 8px 12px;
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  #dpad {
-    display: grid;
-    grid-template-columns: repeat(3, 44px);
-    grid-template-rows: repeat(3, 44px);
-    gap: 3px;
-  }
-  .dpad-btn {
-    background: #1e1e2e;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--white);
-    font-size: 18px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    transition: background .1s;
-    touch-action: manipulation;
-  }
-  .dpad-btn:active, .dpad-btn.pressed { background: #2e2e4e; }
-  .dpad-center { background: transparent; border-color: transparent; }
-  #action-btns {
-    display: grid;
-    grid-template-columns: repeat(2, 56px);
-    grid-template-rows: repeat(3, 40px);
-    gap: 5px;
-  }
-  .act-btn {
-    background: #1e1e2e;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--gold);
-    font-size: 10px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 2px;
-    touch-action: manipulation;
-  }
-  .act-btn:active { background: #2e2e4e; }
-  .act-icon { font-size: 16px; }
-  .act-wide {
-    grid-column: 1/-1;
-    background: #1a1a2e;
-    border-color: var(--purple);
-    color: var(--purple);
-  }
+    #cameraWrap {
+      width: 100%;
+      height: 100%;
+      transition: transform 45ms linear;
+    }
 
-  /* ── Modals ── */
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.85);
-    z-index: 100;
-    align-items: center; justify-content: center;
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    min-width: min(340px, 90vw);
-    max-height: 80dvh;
-    overflow-y: auto;
-  }
-  .modal h2 {
-    color: var(--gold);
-    text-align: center;
-    margin-bottom: 14px;
-    letter-spacing: 2px;
-  }
-  .inv-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    border: 1px solid transparent;
-    margin-bottom: 4px;
-    font-size: 13px;
-  }
-  .inv-item:hover, .inv-item:active { background: #1e1e3e; border-color: var(--border); }
-  .inv-item.equipped { border-color: var(--gold); }
-  .inv-glyph { font-size: 18px; min-width: 24px; text-align: center; }
-  .inv-info { flex: 1; }
-  .inv-name { font-weight: bold; }
-  .inv-desc { font-size: 10px; color: var(--dim); }
-  .inv-actions { display: flex; gap: 6px; }
-  .inv-btn {
-    padding: 3px 8px; border-radius: 5px; font-size: 11px;
-    border: 1px solid; cursor: pointer; background: transparent;
-    font-family: monospace;
-  }
-  .inv-btn-use  { color: var(--green);  border-color: var(--green); }
-  .inv-btn-drop { color: var(--red);    border-color: var(--red); }
-  .modal-close {
-    display: block; width: 100%; margin-top: 14px;
-    padding: 10px; border-radius: 8px;
-    background: #2a2a3a; border: 1px solid var(--border);
-    color: var(--white); font-size: 13px; cursor: pointer;
-    font-family: monospace;
-  }
-  .equipped-section {
-    border-top: 1px solid var(--border);
-    margin-top: 10px; padding-top: 10px;
-    font-size: 12px; color: var(--cyan);
-  }
-  .equipped-section p { margin: 3px 0; }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
 
-  /* Title / Death / Win */
-  #titleScreen {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--bg);
-    display: -webkit-flex;
-    display: flex;
-    -webkit-flex-direction: column;
-    flex-direction: column;
-    -webkit-align-items: center;
-    align-items: center;
-    -webkit-justify-content: center;
-    justify-content: center;
-    z-index: 200; padding: 24px;
-    text-align: center;
-  }
-  #titleScreen h1 {
-    font-size: clamp(24px, 6vw, 40px);
-    color: var(--gold);
-    margin-bottom: 8px;
-    letter-spacing: 4px;
-  }
-  #titleScreen .subtitle {
-    color: var(--cyan); font-size: 14px; margin-bottom: 24px;
-  }
-  .story {
-    color: var(--dim); font-size: 12px; line-height: 1.8;
-    max-width: 320px; margin-bottom: 24px;
-  }
-  .big-btn {
-    background: linear-gradient(135deg, #1e1e3e, #2a2a4e);
-    border: 1px solid var(--gold);
-    color: var(--gold);
-    padding: 14px 40px;
-    border-radius: 10px;
-    font-size: 16px; font-weight: bold;
-    cursor: pointer; font-family: monospace;
-    letter-spacing: 2px;
-    margin: 6px;
-  }
-  .big-btn:active { opacity: .8; }
-  .big-btn.danger { border-color: var(--red); color: var(--red); }
-  .big-btn.info   { border-color: var(--cyan); color: var(--cyan); }
-  #deathScreen, #winScreen {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.92);
-    z-index: 200; align-items: center; justify-content: center;
-    flex-direction: column; gap: 10px; text-align: center; padding: 24px;
-  }
-  #deathScreen.show, #winScreen.show { display: flex; }
-  #deathScreen h2 { color: var(--red); font-size: 28px; }
-  #winScreen  h2 { color: var(--gold); font-size: 28px; }
-  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin: 12px 0; font-size: 13px; }
-  .stat-grid span:nth-child(odd) { color: var(--dim); }
-  .stat-grid span:nth-child(even){ color: var(--white); font-weight: bold; }
+    #miniWrap {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 128px;
+      height: 88px;
+      background: rgba(3, 4, 8, 0.72);
+      border: 1px solid #37415d;
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 4;
+    }
 
-  /* Swipe hint */
-  #swipeHint {
-    position: absolute; bottom: 8px; right: 8px;
-    font-size: 10px; color: var(--dim);
-    pointer-events: none;
-  }
-</style>
+    #msglog {
+      height: 68px;
+      border-top: 1px solid var(--edge);
+      background: #121621;
+      padding: 6px 10px;
+      font-size: 11px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    #controls {
+      border-top: 1px solid var(--edge);
+      background: linear-gradient(180deg, #161b27 0%, #10141e 100%);
+      padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 46px);
+      grid-template-rows: repeat(3, 46px);
+      gap: 4px;
+    }
+
+    .btn,
+    .btn-sm,
+    .pad {
+      border: 1px solid #33405a;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #1f2638 0%, #1a2232 100%);
+      color: #e6ecff;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .pad { font-size: 18px; }
+    .pad.empty { opacity: 0; pointer-events: none; }
+    .pad:active,
+    .btn:active,
+    .btn-sm:active,
+    .active-touch {
+      transform: translateY(1px) scale(0.98);
+      filter: brightness(1.2);
+    }
+
+    #act {
+      display: grid;
+      grid-template-columns: repeat(2, 64px);
+      grid-template-rows: repeat(3, 40px);
+      gap: 5px;
+    }
+
+    .btn-sm { font-size: 10px; color: var(--gold); }
+    .btn-skill { color: #b3d3ff; border-color: #3e5881; }
+    .btn-wide { grid-column: 1 / -1; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .overlay.show { display: flex; }
+
+    .card {
+      width: min(680px, 94vw);
+      max-height: 88dvh;
+      overflow: auto;
+      background: linear-gradient(180deg, #161c2a 0%, #101521 100%);
+      border: 1px solid #33405a;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    h1 {
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: clamp(26px, 6vw, 44px);
+      text-shadow: 0 0 14px rgba(240, 199, 95, 0.35);
+    }
+    h2 { color: var(--gold); margin-bottom: 10px; font-size: 18px; }
+
+    .class-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+
+    .class-item {
+      border: 1px solid #33405a;
+      border-radius: 10px;
+      padding: 10px;
+      background: #151b29;
+      cursor: pointer;
+    }
+
+    .class-item.selected { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(240, 199, 95, 0.5) inset; }
+
+    .line { margin: 6px 0; color: #d6ddf2; font-size: 13px; }
+    .muted { color: var(--muted); }
+    .row-space { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+    .inv-item {
+      border: 1px solid #33405a;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 6px;
+      background: #151c2c;
+      font-size: 12px;
+    }
+
+    .rar-common { color: #e7ebf7; }
+    .rar-uncommon { color: #69d58d; }
+    .rar-rare { color: #5aa2ff; }
+    .rar-epic { color: #b285ff; }
+    .rar-legendary { color: #ffa13e; }
+
+    #bossBanner {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 8;
+      background: rgba(0, 0, 0, 0.55);
+      color: var(--gold);
+      font-size: clamp(30px, 9vw, 72px);
+      letter-spacing: 4px;
+      text-shadow: 0 0 12px rgba(240, 199, 95, 0.7);
+      font-weight: bold;
+      pointer-events: none;
+    }
+
+    #toast {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 12px;
+      padding: 4px 10px;
+      border: 1px solid #3a4a6d;
+      background: rgba(7, 12, 20, 0.88);
+      border-radius: 999px;
+      font-size: 11px;
+      color: #d4e4ff;
+      z-index: 5;
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .class-grid { grid-template-columns: 1fr; }
+      #miniWrap { width: 108px; height: 76px; }
+      #act { grid-template-columns: repeat(2, 58px); }
+    }
+  </style>
 </head>
 <body>
-
-<!-- Title -->
-<div id="titleScreen">
-  <h1>⚔ 地牢探险 ⚔</h1>
-  <div class="subtitle">Roguelike Dungeon Crawler</div>
-  <div class="story">
-    你是一位传说中的勇者。<br>
-    古老的地牢深处藏着无尽的宝藏，<br>
-    也潜伏着凶猛的怪物。<br>
-    征服 <strong style="color:var(--gold)">6层地牢</strong>，取回失落的神器！
-  </div>
-  <button class="big-btn" onclick="startGame()">⚔ 开始冒险</button>
-  <div style="margin-top:12px;font-size:11px;color:var(--dim)">
-    手机：使用屏幕方向键操控<br>
-    电脑：WASD / 方向键
-  </div>
-</div>
-
-<!-- Death -->
-<div id="deathScreen">
-  <h2>💀 你已阵亡</h2>
-  <div class="stat-grid" id="deathStats"></div>
-  <button class="big-btn" onclick="startGame()">重新开始</button>
-  <button class="big-btn info" onclick="document.getElementById('deathScreen').classList.remove('show')">查看地图</button>
-</div>
-
-<!-- Win -->
-<div id="winScreen">
-  <h2>🏆 你征服了地牢！</h2>
-  <div class="stat-grid" id="winStats"></div>
-  <button class="big-btn" onclick="startGame()">再来一局</button>
-</div>
-
-<!-- Main App -->
-<div id="app">
-  <!-- HUD -->
-  <div id="hud">
-    <div class="hud-row">
-      <span class="hud-label">HP</span>
-      <div class="bar-wrap"><div class="bar bar-hp" id="barHp"></div></div>
-      <span class="hud-val" id="valHp"></span>
+  <div id="app">
+    <div id="hud">
+      <div class="row">
+        <span>HP</span>
+        <div class="bar-wrap"><div class="ghost" id="hpGhost"></div><div class="bar" id="hpBar" style="background: var(--danger)"></div></div>
+        <span id="hpVal"></span>
+      </div>
+      <div class="row"><span>Lv</span><span id="lvVal" style="color:var(--gold)"></span><span>层</span><span id="floorVal"></span></div>
+      <div class="row">
+        <span>MP</span>
+        <div class="bar-wrap"><div class="bar" id="mpBar" style="background: var(--mana)"></div></div>
+        <span id="mpVal"></span>
+      </div>
+      <div class="row">
+        <span>XP</span>
+        <div class="bar-wrap"><div class="bar" id="xpBar" style="background: var(--xp)"></div></div>
+        <span id="xpVal"></span>
+      </div>
+      <div class="row"><span>ATK</span><span id="atkVal" style="color:var(--gold)"></span><span>DEF</span><span id="defVal" style="color:var(--gold)"></span></div>
+      <div class="row"><span>暴击</span><span id="critVal"></span><span>金币</span><span id="goldVal" style="color:var(--gold)"></span></div>
     </div>
-    <div class="hud-row">
-      <span class="hud-label" style="color:var(--gold)">Lv</span>
-      <span class="hud-stat" id="valLv"></span>
-      <span class="hud-label" style="margin-left:6px">XP</span>
-      <div class="bar-wrap"><div class="bar bar-xp" id="barXp"></div></div>
-    </div>
-    <div class="hud-row">
-      <span class="hud-label" style="color:var(--cyan)">MP</span>
-      <div class="bar-wrap"><div class="bar bar-mp" id="barMp"></div></div>
-      <span class="hud-val" id="valMp"></span>
-    </div>
-    <div class="hud-row" style="font-size:11px;gap:10px;">
-      <span>⚔<span id="valAtk" class="hud-stat"></span></span>
-      <span>🛡<span id="valDef" class="hud-stat"></span></span>
-      <span>💰<span id="valGold" class="hud-stat"></span></span>
-    </div>
-    <div class="floor-badge" id="floorBadge"></div>
-  </div>
 
-  <!-- Canvas viewport -->
-  <div id="viewport">
-    <canvas id="gameCanvas"></canvas>
-    <div id="swipeHint">滑动移动</div>
-  </div>
-
-  <!-- Message log -->
-  <div id="msglog"></div>
-
-  <!-- Controls -->
-  <div id="controls">
-    <div id="dpad">
-      <div></div>
-      <div class="dpad-btn" id="btn-up"   data-dir="0,-1">▲</div>
-      <div></div>
-      <div class="dpad-btn" id="btn-left" data-dir="-1,0">◀</div>
-      <div class="dpad-btn dpad-center">+</div>
-      <div class="dpad-btn" id="btn-right"data-dir="1,0">▶</div>
-      <div></div>
-      <div class="dpad-btn" id="btn-down" data-dir="0,1">▼</div>
-      <div></div>
+    <div id="viewport">
+      <div id="cameraWrap">
+        <canvas id="game"></canvas>
+      </div>
+      <canvas id="miniWrap"></canvas>
+      <div id="bossBanner"></div>
+      <div id="toast"></div>
     </div>
-    <div id="action-btns">
-      <button class="act-btn" onclick="doPickup()"><span class="act-icon">🎒</span>拾取</button>
-      <button class="act-btn" onclick="showInventory()"><span class="act-icon">📦</span>背包</button>
-      <button class="act-btn" onclick="doStairDown()"><span class="act-icon">⬇</span>下楼</button>
-      <button class="act-btn" onclick="doStairUp()"><span class="act-icon">⬆</span>上楼</button>
-      <button class="act-btn act-wide" onclick="doWait()"><span class="act-icon">⏳</span>等待/休息</button>
+
+    <div id="msglog"></div>
+
+    <div id="controls">
+      <div id="dpad">
+        <button class="pad empty"></button>
+        <button class="pad" data-move="0,-1">▲</button>
+        <button class="pad empty"></button>
+        <button class="pad" data-move="-1,0">◀</button>
+        <button class="pad" onclick="waitTurn()">·</button>
+        <button class="pad" data-move="1,0">▶</button>
+        <button class="pad empty"></button>
+        <button class="pad" data-move="0,1">▼</button>
+        <button class="pad empty"></button>
+      </div>
+      <div id="act">
+        <button class="btn-sm btn-skill" onclick="useSkill(0)">技能1</button>
+        <button class="btn-sm btn-skill" onclick="useSkill(1)">技能2</button>
+        <button class="btn-sm" onclick="pickup()">拾取</button>
+        <button class="btn-sm" onclick="openInventory()">背包</button>
+        <button class="btn-sm" onclick="useStairs()">楼梯</button>
+        <button class="btn-sm" onclick="toggleMinimap()">地图</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Inventory Modal -->
-<div class="modal-overlay" id="invModal">
-  <div class="modal">
-    <h2>📦 背包</h2>
-    <div id="invList"></div>
-    <div class="equipped-section" id="equippedInfo"></div>
-    <button class="modal-close" onclick="closeInventory()">关闭背包</button>
+  <div class="overlay show" id="titleOverlay">
+    <div class="card">
+      <h1>暗影地牢</h1>
+      <div class="line">高危深渊，八层试炼。你只有一次机会。</div>
+      <div class="line muted">战斗手感强化：震屏、浮字、爆裂粒子、技能特效、Boss 演出。</div>
+      <div class="class-grid" id="classGrid"></div>
+      <div class="row-space" style="margin-top:10px">
+        <button class="btn" style="padding:10px 14px" onclick="startGame()">开始冒险</button>
+        <span class="muted" style="font-size:12px">键盘: WASD/方向键, 1/2 技能, I 背包, G 拾取, M 地图</span>
+      </div>
+    </div>
   </div>
-</div>
 
-<script>
-// ══════════════════════════════════════════════════════
-//  CONSTANTS
-// ══════════════════════════════════════════════════════
-const MAP_W = 60, MAP_H = 40;
-const MAX_ROOMS = 16, MIN_RS = 4, MAX_RS = 10;
-const MAX_DEPTH = 6;
-const FOV_R = 8;
-const CELL = 20; // pixels per cell
+  <div class="overlay" id="inventoryOverlay">
+    <div class="card">
+      <h2>背包与装备</h2>
+      <div class="line" id="eqInfo"></div>
+      <div id="invList"></div>
+      <button class="btn" style="padding:8px 12px" onclick="closeInventory()">关闭</button>
+    </div>
+  </div>
 
-const COLORS = {
-  wall_vis:    '#3a3a4a',
-  wall_exp:    '#1e1e28',
-  floor_vis:   '#1a1a22',
-  floor_exp:   '#111118',
-  stair:       '#f5c518',
-  door:        '#a0522d',
-  player:      '#ffffff',
-  monster:     { r:'#e84545',g:'#4caf50',b:'#90caf9',y:'#f5c518',c:'#26c6da',m:'#ab47bc',w:'#e0e0e0',X:'#ff1744' },
-  item:        { '!r':'#ef5350','!c':'#26c6da','!':'#f48fb1','/':'#b0bec5','[':'#80cbc4','?':'#fff176','$':'#f5c518' },
-};
+  <div class="overlay" id="eventOverlay">
+    <div class="card" id="eventCard"></div>
+  </div>
 
-// ══════════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════════
-let G = {}; // game state
+  <script>
+    const MAP_W = 60;
+    const MAP_H = 40;
+    const MAX_FLOOR = 8;
+    const MAX_ROOMS = 16;
+    const MIN_ROOM = 5;
+    const MAX_ROOM = 10;
+    const CELL = 20;
+    const FOV_RADIUS = 8;
 
-// ══════════════════════════════════════════════════════
-//  MAP GENERATION
-// ══════════════════════════════════════════════════════
-function makeTile(t) {
-  return { type:t, walkable: t!=='wall', transparent: t==='floor'||t==='stair_down'||t==='stair_up', explored:false };
-}
+    const RARITY = [
+      { key: "common", name: "白", color: "rar-common", affix: 0, p: 52 },
+      { key: "uncommon", name: "绿", color: "rar-uncommon", affix: 1, p: 24 },
+      { key: "rare", name: "蓝", color: "rar-rare", affix: 2, p: 14 },
+      { key: "epic", name: "紫", color: "rar-epic", affix: 3, p: 8 },
+      { key: "legendary", name: "橙", color: "rar-legendary", affix: 4, p: 2 },
+    ];
 
-function generateMap(depth) {
-  const tiles = Array.from({length:MAP_H}, () => Array.from({length:MAP_W}, () => makeTile('wall')));
-  const rooms = [];
-  const monsters = [];
-  const items = [];
+    const CLASSES = [
+      {
+        id: "warrior",
+        name: "战士",
+        desc: "硬抗与近战爆发",
+        hp: 40,
+        mp: 8,
+        atk: 7,
+        def: 4,
+        crit: 0.1,
+        dodge: 0.06,
+        skills: [
+          { name: "旋风斩", mp: 5, tip: "周围1格AOE", type: "whirlwind" },
+          { name: "战吼", mp: 4, tip: "+3防御(10回合)", type: "warcry" },
+        ],
+        passive: "近战吸血 10%",
+      },
+      {
+        id: "mage",
+        name: "法师",
+        desc: "远程法术控制",
+        hp: 25,
+        mp: 20,
+        atk: 3,
+        def: 2,
+        crit: 0.1,
+        dodge: 0.08,
+        skills: [
+          { name: "火球术", mp: 6, tip: "直线+爆炸", type: "fireball" },
+          { name: "冰冻术", mp: 5, tip: "3x3减速", type: "freeze" },
+        ],
+        passive: "每回合回蓝 +1",
+      },
+      {
+        id: "rogue",
+        name: "盗贼",
+        desc: "高暴击与机动",
+        hp: 30,
+        mp: 12,
+        atk: 5,
+        def: 2,
+        crit: 0.25,
+        dodge: 0.16,
+        skills: [
+          { name: "暗影步", mp: 4, tip: "瞬移4格", type: "shadowstep" },
+          { name: "毒刃", mp: 3, tip: "附毒3回合", type: "poisonblade" },
+        ],
+        passive: "击杀金币 +50%",
+      },
+    ];
 
-  for (let attempt = 0; attempt < 300 && rooms.length < MAX_ROOMS; attempt++) {
-    const w = rndInt(MIN_RS, MAX_RS), h = rndInt(MIN_RS, MAX_RS);
-    const x = rndInt(1, MAP_W - w - 2), y = rndInt(1, MAP_H - h - 2);
-    const room = {x1:x,y1:y,x2:x+w,y2:y+h};
-    if (rooms.some(r => rectsOverlap(r, room))) continue;
+    const AFFIX_POOL = [
+      { key: "lifesteal", name: "嗜血", roll: [4, 12] },
+      { key: "swift", name: "迅捷", roll: [4, 14] },
+      { key: "flame", name: "烈焰", roll: [2, 8] },
+      { key: "fortitude", name: "坚韧", roll: [4, 14] },
+      { key: "lucky", name: "幸运", roll: [6, 18] },
+      { key: "thunder", name: "雷鸣", roll: [8, 22] },
+      { key: "frost", name: "冰霜", roll: [8, 22] },
+      { key: "berserk", name: "狂暴", roll: [10, 26] },
+    ];
 
-    for (let ry = room.y1; ry < room.y2; ry++)
-      for (let rx = room.x1; rx < room.x2; rx++)
-        tiles[ry][rx] = makeTile('floor');
+    const MONSTER_TABLE = {
+      1: ["rat", "bat", "slime"],
+      2: ["rat", "bat", "slime"],
+      3: ["goblin", "skeleton", "spider"],
+      4: ["goblin", "skeleton", "spider"],
+      5: ["orc", "warlock", "gargoyle"],
+      6: ["orc", "warlock", "gargoyle"],
+      7: ["drake", "demon", "necromancer"],
+      8: ["drake", "demon", "necromancer"],
+    };
 
-    if (rooms.length > 0) {
-      const [px,py] = center(rooms[rooms.length-1]);
-      const [cx,cy] = center(room);
-      if (Math.random() < .5) { hTunnel(tiles,px,cx,py); vTunnel(tiles,py,cy,cx); }
-      else                     { vTunnel(tiles,py,cy,px); hTunnel(tiles,px,cx,cy); }
-    }
-    rooms.push(room);
-    if (rooms.length > 1) populate(room, depth, monsters, items, tiles);
-  }
+    const MONSTER_DEF = {
+      rat: { name: "老鼠", ch: "r", hp: 6, atk: 3, def: 0, xp: 3, color: "#d8d8d8" },
+      bat: { name: "蝙蝠", ch: "b", hp: 5, atk: 4, def: 0, xp: 3, color: "#ffd05e" },
+      slime: { name: "史莱姆", ch: "s", hp: 9, atk: 3, def: 1, xp: 4, color: "#7dff90" },
+      goblin: { name: "哥布林", ch: "g", hp: 12, atk: 5, def: 1, xp: 7, color: "#6ff06d" },
+      skeleton: { name: "骷髅", ch: "S", hp: 14, atk: 5, def: 2, xp: 8, color: "#f0f0f0" },
+      spider: { name: "暗影蛛", ch: "a", hp: 11, atk: 6, def: 1, xp: 8, color: "#a57dff" },
+      orc: { name: "兽人", ch: "O", hp: 20, atk: 8, def: 2, xp: 12, color: "#4ddd6f" },
+      warlock: { name: "巫师", ch: "W", hp: 15, atk: 9, def: 2, xp: 13, color: "#64d0ff" },
+      gargoyle: { name: "石像鬼", ch: "G", hp: 23, atk: 7, def: 4, xp: 14, color: "#a8b0c8" },
+      drake: { name: "龙人", ch: "D", hp: 30, atk: 11, def: 4, xp: 22, color: "#ff8459" },
+      demon: { name: "恶魔", ch: "E", hp: 28, atk: 12, def: 3, xp: 24, color: "#ff5864" },
+      necromancer: { name: "死灵法师", ch: "N", hp: 24, atk: 13, def: 3, xp: 24, color: "#c48fff" },
+      boss_dragon: { name: "骨龙", ch: "B", hp: 100, atk: 14, def: 6, xp: 120, color: "#ffd17a", boss: true },
+      boss_lord: { name: "暗影领主", ch: "L", hp: 200, atk: 18, def: 5, xp: 300, color: "#ff6fd7", boss: true },
+      shadow_clone: { name: "暗影分身", ch: "C", hp: 40, atk: 10, def: 2, xp: 25, color: "#b58aff" },
+    };
 
-  const [dx,dy] = center(rooms[rooms.length-1]);
-  tiles[dy][dx] = makeTile('stair_down');
-  if (depth > 1) {
-    const [ux,uy] = center(rooms[0]);
-    tiles[uy][ux] = makeTile('stair_up');
-  }
+    const groundItems = ["短剑", "长剑", "重剑", "布甲", "锁甲", "龙鳞甲", "黑曜戒", "秘银戒", "骨牙坠饰"];
 
-  const [sx,sy] = center(rooms[0]);
-  return { tiles, rooms, monsters, items, startX:sx, startY:sy };
-}
+    const ui = {
+      game: document.getElementById("game"),
+      mini: document.getElementById("miniWrap"),
+      msglog: document.getElementById("msglog"),
+      cameraWrap: document.getElementById("cameraWrap"),
+      hpBar: document.getElementById("hpBar"),
+      hpGhost: document.getElementById("hpGhost"),
+      mpBar: document.getElementById("mpBar"),
+      xpBar: document.getElementById("xpBar"),
+      hpVal: document.getElementById("hpVal"),
+      mpVal: document.getElementById("mpVal"),
+      xpVal: document.getElementById("xpVal"),
+      lvVal: document.getElementById("lvVal"),
+      floorVal: document.getElementById("floorVal"),
+      atkVal: document.getElementById("atkVal"),
+      defVal: document.getElementById("defVal"),
+      critVal: document.getElementById("critVal"),
+      goldVal: document.getElementById("goldVal"),
+      title: document.getElementById("titleOverlay"),
+      classGrid: document.getElementById("classGrid"),
+      inventory: document.getElementById("inventoryOverlay"),
+      invList: document.getElementById("invList"),
+      eqInfo: document.getElementById("eqInfo"),
+      eventOverlay: document.getElementById("eventOverlay"),
+      eventCard: document.getElementById("eventCard"),
+      bossBanner: document.getElementById("bossBanner"),
+      toast: document.getElementById("toast"),
+    };
 
-function hTunnel(tiles, x1, x2, y) {
-  for (let x = Math.min(x1,x2); x <= Math.max(x1,x2); x++)
-    if (inBounds(x,y)) tiles[y][x] = makeTile('floor');
-}
-function vTunnel(tiles, y1, y2, x) {
-  for (let y = Math.min(y1,y2); y <= Math.max(y1,y2); y++)
-    if (inBounds(x,y)) tiles[y][x] = makeTile('floor');
-}
+    const ctx = ui.game.getContext("2d");
+    const miniCtx = ui.mini.getContext("2d");
 
-const MONSTER_TPL = [
-  // name, glyph, colorKey, hp, def, pwr, xp, minDepth
-  ['老鼠',   'r','r',  4, 0, 2,  2, 1],
-  ['蝙蝠',   'b','y',  5, 0, 3,  3, 1],
-  ['哥布林', 'g','g',  8, 1, 4,  5, 1],
-  ['骷髅',   's','w', 10, 1, 5,  7, 2],
-  ['兽人',   'O','g', 14, 2, 7, 10, 2],
-  ['食人魔', 'T','r', 20, 3, 9, 15, 3],
-  ['巫师',   'W','c', 12, 1, 8, 14, 3],
-  ['龙人',   'D','m', 25, 4,12, 22, 4],
-  ['吸血鬼', 'V','r', 18, 3,10, 18, 4],
-  ['巨龙',   'X','X', 40, 6,18, 50, 5],
-];
+    const G = {
+      started: false,
+      selectedClass: CLASSES[0].id,
+      scene: "title",
+      map: [],
+      explored: [],
+      visible: new Set(),
+      monsters: [],
+      items: [],
+      events: [],
+      floor: 1,
+      maxFloor: MAX_FLOOR,
+      player: null,
+      log: [],
+      camera: { x: 0, y: 0, cellsX: 0, cellsY: 0 },
+      animLock: false,
+      fx: {
+        particles: [],
+        texts: [],
+        flashes: [],
+        lunge: 0,
+        shake: 0,
+        shakeAmp: 0,
+      },
+      minimapOn: true,
+      swipeStart: null,
+      turn: 0,
+    };
 
-const ITEM_TPL = [
-  // name, kind, val, glyph, colorKey, minDepth, weight
-  ['小血药',   'potion_hp', 10,'!','!r',1,30],
-  ['大血药',   'potion_hp', 25,'!','!r',2,15],
-  ['魔力药水', 'potion_mp',  8,'!','!c',1,20],
-  ['铁剑',     'weapon',     3,'/','/',1,20],
-  ['钢剑',     'weapon',     6,'/','/',2,12],
-  ['精灵弯刀', 'weapon',    10,'/','/',3, 6],
-  ['皮甲',     'armor',      2,'[','[',1,20],
-  ['锁甲',     'armor',      5,'[','[',2,12],
-  ['魔法盾甲', 'armor',      9,'[','[',4, 5],
-  ['闪电卷轴', 'scroll',    20,'?','?',2,10],
-  ['金币袋',   'gold',       0,'$','$',1,25],
-];
+    function rint(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function key(x, y) { return `${x},${y}`; }
+    function inMap(x, y) { return x >= 0 && y >= 0 && x < MAP_W && y < MAP_H; }
+    function chance(p) { return Math.random() < p; }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-function populate(room, depth, monsters, items, tiles) {
-  const valid = MONSTER_TPL.filter(t => t[7] <= depth);
-  const n = rndInt(0, Math.min(3, 1 + Math.floor(depth/2)));
-  for (let i = 0; i < n; i++) {
-    const mx = rndInt(room.x1, room.x2-1), my = rndInt(room.y1, room.y2-1);
-    if (!tiles[my][mx].walkable) continue;
-    const tpl = valid[Math.floor(Math.random()*valid.length)];
-    const scale = 1 + (depth - tpl[7]) * 0.15;
-    monsters.push({
-      x:mx, y:my, glyph:tpl[1], colorKey:tpl[2], name:tpl[0],
-      hp: Math.round(tpl[3]*scale), maxHp: Math.round(tpl[3]*scale),
-      def: Math.round(tpl[4]*scale), pwr: Math.round(tpl[5]*scale),
-      xp: Math.round(tpl[6]*scale),
-      ai: Math.random()<.5 ? 'idle' : 'patrol',
-      alive: true, alertRange: 7
-    });
-  }
-
-  const validI = ITEM_TPL.filter(t => t[6] <= depth);
-  const ni = rndInt(0, 2);
-  for (let i = 0; i < ni; i++) {
-    const ix = rndInt(room.x1, room.x2-1), iy = rndInt(room.y1, room.y2-1);
-    if (!tiles[iy][ix].walkable) continue;
-    const weights = validI.map(t=>t[7]);
-    const tpl = weightedChoice(validI, weights);
-    const val = tpl[2] === 0 ? rndInt(5*depth, 20*depth) : tpl[2];
-    items.push({ x:ix, y:iy, name:tpl[0], kind:tpl[1], val, glyph:tpl[3], colorKey:tpl[4] });
-  }
-}
-
-// ══════════════════════════════════════════════════════
-//  FOV (shadow casting simplified)
-// ══════════════════════════════════════════════════════
-function computeFov(tiles, ox, oy, r) {
-  const vis = new Set();
-  vis.add(`${ox},${oy}`);
-  for (let a = 0; a < 360; a++) {
-    const rad = a * Math.PI / 180;
-    let rx = ox, ry = oy;
-    for (let i = 0; i < r; i++) {
-      rx += Math.cos(rad); ry += Math.sin(rad);
-      const ix = Math.round(rx), iy = Math.round(ry);
-      if (!inBounds(ix,iy)) break;
-      vis.add(`${ix},${iy}`);
-      if (!tiles[iy][ix].transparent) break;
-    }
-  }
-  return vis;
-}
-
-// ══════════════════════════════════════════════════════
-//  COMBAT & AI
-// ══════════════════════════════════════════════════════
-function calcDmg(pwr, def) {
-  return Math.max(1, pwr - def + rndInt(-2,2));
-}
-
-function monsterTurn() {
-  const { tiles, monsters, player, fov } = G;
-  for (const m of monsters) {
-    if (!m.alive) continue;
-    const dist = Math.abs(m.x-player.x) + Math.abs(m.y-player.y);
-    if (dist <= m.alertRange) m.ai = 'chase';
-
-    if (m.ai === 'chase') {
-      if (dist === 1) {
-        const dmg = calcDmg(m.pwr, totalDef());
-        player.hp -= dmg;
-        addMsg(`${m.name} 攻击你！伤害 ${dmg}`, 'red');
-      } else {
-        const step = bfsStep(m.x, m.y, player.x, player.y);
-        if (step) { m.x = step[0]; m.y = step[1]; }
+    function weightedPick(list) {
+      const sum = list.reduce((n, it) => n + it.p, 0);
+      let t = Math.random() * sum;
+      for (const it of list) {
+        t -= it.p;
+        if (t <= 0) return it;
       }
-    } else if (m.ai === 'patrol') {
-      if (Math.random() < .35) {
-        const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-        shuffle(dirs);
-        for (const [dx,dy] of dirs) {
-          const nx=m.x+dx, ny=m.y+dy;
-          if (inBounds(nx,ny) && tiles[ny][nx].walkable
-              && !monsters.some(o=>o!==m&&o.alive&&o.x===nx&&o.y===ny)
-              && !(nx===player.x&&ny===player.y)) {
-            m.x=nx; m.y=ny; break;
+      return list[list.length - 1];
+    }
+
+    function addLog(text, color = "#d8e1fa") {
+      G.log.push({ text, color });
+      if (G.log.length > 40) G.log.shift();
+      const recent = G.log.slice(-4);
+      ui.msglog.innerHTML = recent.map((m) => `<div style='color:${m.color}'>${m.text}</div>`).join("");
+    }
+
+    function toast(text) {
+      ui.toast.textContent = text;
+      ui.toast.style.display = "block";
+      clearTimeout(ui.toast._t);
+      ui.toast._t = setTimeout(() => (ui.toast.style.display = "none"), 1300);
+    }
+
+    function showBossBanner(name) {
+      ui.bossBanner.textContent = name;
+      ui.bossBanner.style.display = "flex";
+      setTimeout(() => (ui.bossBanner.style.display = "none"), 1250);
+    }
+
+    function updateClassUI() {
+      ui.classGrid.innerHTML = "";
+      for (const c of CLASSES) {
+        const d = document.createElement("div");
+        d.className = "class-item" + (G.selectedClass === c.id ? " selected" : "");
+        d.innerHTML = `
+          <div class='row-space'><strong>${c.name}</strong><span class='muted'>${c.desc}</span></div>
+          <div class='line'>HP ${c.hp} / MP ${c.mp} / ATK ${c.atk} / DEF ${c.def}</div>
+          <div class='line'>技能: ${c.skills[0].name}(${c.skills[0].mp})、${c.skills[1].name}(${c.skills[1].mp})</div>
+          <div class='line muted'>被动: ${c.passive}</div>
+        `;
+        d.onclick = () => {
+          G.selectedClass = c.id;
+          updateClassUI();
+        };
+        ui.classGrid.appendChild(d);
+      }
+    }
+
+    function makePlayer() {
+      const c = CLASSES.find((x) => x.id === G.selectedClass);
+      return {
+        classId: c.id,
+        className: c.name,
+        x: 0,
+        y: 0,
+        hp: c.hp,
+        hpMax: c.hp,
+        hpGhost: c.hp,
+        mp: c.mp,
+        mpMax: c.mp,
+        atkBase: c.atk,
+        defBase: c.def,
+        critBase: c.crit,
+        dodgeBase: c.dodge,
+        xp: 0,
+        xpNext: 20,
+        lv: 1,
+        gold: 0,
+        kills: 0,
+        combo: 0,
+        comboTurns: 0,
+        buffs: [],
+        debuffs: [],
+        inventory: [],
+        equips: { weapon: null, armor: null, acc: null },
+        poisonBlade: 0,
+      };
+    }
+
+    function totalStat(stat) {
+      const p = G.player;
+      let value = 0;
+      if (stat === "atk") value = p.atkBase;
+      if (stat === "def") value = p.defBase;
+      if (stat === "crit") value = p.critBase;
+      if (stat === "dodge") value = p.dodgeBase;
+      if (stat === "lifesteal") value = p.classId === "warrior" ? 0.1 : 0;
+      if (stat === "dr") value = 0;
+      if (stat === "fire") value = 0;
+      if (stat === "thunder") value = 0;
+      if (stat === "frost") value = 0;
+      if (stat === "lucky") value = 0;
+
+      const all = [p.equips.weapon, p.equips.armor, p.equips.acc].filter(Boolean);
+      for (const it of all) {
+        if (stat === "atk") value += it.atk || 0;
+        if (stat === "def") value += it.def || 0;
+        for (const af of it.affix) {
+          if (af.key === "lifesteal" && stat === "lifesteal") value += af.v / 100;
+          if (af.key === "swift" && stat === "dodge") value += af.v / 100;
+          if (af.key === "flame" && stat === "fire") value += af.v;
+          if (af.key === "fortitude" && stat === "dr") value += af.v / 100;
+          if (af.key === "lucky" && stat === "lucky") value += af.v / 100;
+          if (af.key === "thunder" && stat === "thunder") value += af.v / 100;
+          if (af.key === "frost" && stat === "frost") value += af.v / 100;
+        }
+      }
+
+      if (stat === "atk" && p.hp / p.hpMax < 0.3) {
+        for (const it of all) {
+          for (const af of it.affix) {
+            if (af.key === "berserk") value += Math.floor((p.atkBase + (it.atk || 0)) * (af.v / 100));
+          }
+        }
+      }
+
+      for (const b of p.buffs) {
+        if (b.key === "defup" && stat === "def") value += b.v;
+      }
+      return value;
+    }
+
+    function randomAffix(count) {
+      const pool = [...AFFIX_POOL];
+      const out = [];
+      for (let i = 0; i < count && pool.length; i++) {
+        const idx = rint(0, pool.length - 1);
+        const f = pool.splice(idx, 1)[0];
+        out.push({ key: f.key, name: f.name, v: rint(f.roll[0], f.roll[1]) });
+      }
+      return out;
+    }
+
+    function createItem(depth) {
+      const rarity = weightedPick(RARITY);
+      const type = pick(["weapon", "armor", "acc"]);
+      const base = 1 + Math.floor(depth * 1.5);
+      const item = {
+        id: Math.random().toString(36).slice(2),
+        name: pick(groundItems),
+        rarity,
+        type,
+        atk: type === "weapon" ? base + rint(0, 3) : 0,
+        def: type === "armor" ? base + rint(0, 2) : 0,
+        affix: randomAffix(rarity.affix),
+        x: 0,
+        y: 0,
+      };
+      return item;
+    }
+
+    function generateFloor(depth) {
+      G.map = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => "#"));
+      G.explored = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => false));
+      G.monsters = [];
+      G.items = [];
+      G.events = [];
+
+      const rooms = [];
+      for (let i = 0; i < 320 && rooms.length < MAX_ROOMS; i++) {
+        const w = rint(MIN_ROOM, MAX_ROOM);
+        const h = rint(MIN_ROOM, MAX_ROOM);
+        const x = rint(1, MAP_W - w - 2);
+        const y = rint(1, MAP_H - h - 2);
+        const room = { x1: x, y1: y, x2: x + w, y2: y + h, type: pick(["normal", "normal", "normal", "treasure", "trap", "event"]) };
+        if (rooms.some((r) => !(room.x2 < r.x1 || room.x1 > r.x2 || room.y2 < r.y1 || room.y1 > r.y2))) continue;
+        carveRoom(room);
+        if (rooms.length > 0) {
+          const [px, py] = center(rooms[rooms.length - 1]);
+          const [cx, cy] = center(room);
+          if (chance(0.5)) {
+            hTunnel(px, cx, py);
+            vTunnel(py, cy, cx);
+          } else {
+            vTunnel(py, cy, px);
+            hTunnel(px, cx, cy);
+          }
+        }
+        rooms.push(room);
+      }
+
+      const [sx, sy] = center(rooms[0]);
+      const [ex, ey] = center(rooms[rooms.length - 1]);
+      G.map[sy][sx] = depth === 1 ? "." : "<";
+      G.map[ey][ex] = ">";
+      G.player.x = sx;
+      G.player.y = sy;
+
+      if (depth === 4 || depth === 8) {
+        G.monsters.push(spawnBoss(depth, ex, ey - 2));
+        showBossBanner(depth === 4 ? "骨龙" : "暗影领主");
+      }
+
+      for (let i = 1; i < rooms.length; i++) {
+        const room = rooms[i];
+        const [cx, cy] = center(room);
+        const monCount = rint(0, 2 + Math.floor(depth / 3));
+        for (let m = 0; m < monCount; m++) {
+          const x = rint(room.x1 + 1, room.x2 - 1);
+          const y = rint(room.y1 + 1, room.y2 - 1);
+          if (x === G.player.x && y === G.player.y) continue;
+          if (!monsterAt(x, y)) G.monsters.push(spawnMonster(depth, x, y));
+        }
+
+        if (chance(0.4)) {
+          const it = createItem(depth);
+          it.x = cx;
+          it.y = cy;
+          G.items.push(it);
+        }
+
+        if (room.type !== "normal" && chance(0.75)) {
+          G.events.push({
+            x: cx,
+            y: cy,
+            type: room.type,
+            used: false,
+          });
+        }
+      }
+    }
+
+    function carveRoom(r) {
+      for (let y = r.y1; y <= r.y2; y++) {
+        for (let x = r.x1; x <= r.x2; x++) G.map[y][x] = ".";
+      }
+    }
+    function hTunnel(x1, x2, y) {
+      for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) G.map[y][x] = ".";
+    }
+    function vTunnel(y1, y2, x) {
+      for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) G.map[y][x] = ".";
+    }
+    function center(r) {
+      return [Math.floor((r.x1 + r.x2) / 2), Math.floor((r.y1 + r.y2) / 2)];
+    }
+
+    function spawnMonster(depth, x, y) {
+      const id = pick(MONSTER_TABLE[depth]);
+      const base = MONSTER_DEF[id];
+      const scale = 1 + (depth - 1) * 0.15;
+      return {
+        id,
+        name: base.name,
+        ch: base.ch,
+        x,
+        y,
+        hp: Math.floor(base.hp * scale),
+        hpMax: Math.floor(base.hp * scale),
+        atk: Math.floor(base.atk * scale),
+        def: Math.floor(base.def * scale),
+        xp: Math.floor(base.xp * scale),
+        color: base.color,
+        ai: "patrol",
+        status: [],
+        boss: false,
+        phase: 1,
+        cooldown: 0,
+      };
+    }
+
+    function spawnBoss(depth, x, y) {
+      if (depth === 4) {
+        const b = MONSTER_DEF.boss_dragon;
+        return { id: "boss_dragon", name: b.name, ch: b.ch, x, y, hp: b.hp, hpMax: b.hp, atk: b.atk, def: b.def, xp: b.xp, color: b.color, ai: "boss", status: [], boss: true, phase: 1, cooldown: 0 };
+      }
+      const b = MONSTER_DEF.boss_lord;
+      return { id: "boss_lord", name: b.name, ch: b.ch, x, y, hp: b.hp, hpMax: b.hp, atk: b.atk, def: b.def, xp: b.xp, color: b.color, ai: "boss", status: [], boss: true, phase: 1, cooldown: 0 };
+    }
+
+    function monsterAt(x, y) {
+      return G.monsters.find((m) => m.hp > 0 && m.x === x && m.y === y);
+    }
+
+    function itemAt(x, y) {
+      return G.items.find((it) => it.x === x && it.y === y);
+    }
+
+    function eventAt(x, y) {
+      return G.events.find((ev) => ev.x === x && ev.y === y && !ev.used);
+    }
+
+    function computeFov() {
+      G.visible.clear();
+      const ox = G.player.x;
+      const oy = G.player.y;
+      G.visible.add(key(ox, oy));
+      for (let a = 0; a < 360; a++) {
+        const r = (a * Math.PI) / 180;
+        let rx = ox;
+        let ry = oy;
+        for (let i = 0; i < FOV_RADIUS; i++) {
+          rx += Math.cos(r);
+          ry += Math.sin(r);
+          const x = Math.round(rx);
+          const y = Math.round(ry);
+          if (!inMap(x, y)) break;
+          G.visible.add(key(x, y));
+          G.explored[y][x] = true;
+          if (G.map[y][x] === "#") break;
+        }
+      }
+    }
+
+    function applyShake(amp) {
+      G.fx.shake = 5;
+      G.fx.shakeAmp = amp;
+    }
+
+    function addParticle(x, y, color, vx = 0, vy = 0, life = 0.45, size = 2) {
+      G.fx.particles.push({ x, y, color, vx, vy, life, max: life, size });
+    }
+
+    function addText(x, y, text, color, big = false) {
+      G.fx.texts.push({ x, y, text, color, life: 0.65, max: 0.65, big });
+    }
+
+    function markFlash(target, color = "#fff") {
+      G.fx.flashes.push({ target, color, t: 0.12 });
+    }
+
+    function damageRoll(att, def) {
+      return Math.max(1, Math.floor(att - def + rint(-2, 2)));
+    }
+
+    function doDamage(src, dst, amount, type = "normal") {
+      const dodge = dst === G.player ? totalStat("dodge") : 0.04;
+      if (chance(dodge)) {
+        addText(dst.x, dst.y - 0.3, "MISS", "#a8d8ff", true);
+        addLog(`${dst === G.player ? "你" : dst.name} 闪避了攻击`, "#8fd6ff");
+        return { miss: true, dmg: 0, crit: false };
+      }
+
+      const critRate = src === G.player ? totalStat("crit") : 0.05;
+      const crit = chance(critRate);
+      let dmg = amount * (crit ? 2 : 1);
+
+      if (dst === G.player) {
+        dmg = Math.max(1, Math.floor(dmg * (1 - totalStat("dr"))));
+      }
+
+      dst.hp -= dmg;
+      markFlash(dst);
+      addText(dst.x, dst.y - 0.2, `-${dmg}`, crit ? "#ffd96c" : type === "fire" ? "#ff8d4d" : "#ff6868", crit);
+      applyShake(crit ? 8 : 5);
+
+      for (let i = 0; i < (crit ? 7 : 4); i++) {
+        addParticle(dst.x + 0.5, dst.y + 0.5, "#ff4a4a", (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 0.35, 2);
+      }
+
+      if (src === G.player) {
+        const ls = totalStat("lifesteal");
+        if (ls > 0 && dmg > 0) {
+          const heal = Math.max(1, Math.floor(dmg * ls));
+          G.player.hp = clamp(G.player.hp + heal, 0, G.player.hpMax);
+          addText(G.player.x, G.player.y - 0.8, `+${heal}`, "#6fffb3");
+        }
+      }
+
+      if (src === G.player && totalStat("fire") > 0) {
+        dst.status.push({ key: "burn", turns: 2, v: Math.ceil(totalStat("fire") / 2) });
+      }
+      if (src === G.player && totalStat("frost") > 0 && chance(totalStat("frost"))) {
+        dst.status.push({ key: "freeze", turns: 2, v: 0 });
+      }
+      if (src === G.player && totalStat("thunder") > 0 && chance(totalStat("thunder"))) {
+        chainLightning(dst);
+      }
+
+      return { miss: false, dmg, crit };
+    }
+
+    function chainLightning(origin) {
+      const candidates = G.monsters.filter((m) => m.hp > 0 && m !== origin && manhattan(m, origin) <= 3);
+      if (candidates.length === 0) return;
+      const t = candidates[0];
+      addText(t.x, t.y - 0.3, "⚡", "#8fd6ff", true);
+      t.hp -= 6;
+      for (let i = 0; i < 8; i++) {
+        addParticle(t.x + 0.5, t.y + 0.5, "#7ac9ff", (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, 0.3, 2);
+      }
+      if (t.hp <= 0) killMonster(t, true);
+    }
+
+    function killMonster(m, fromChain = false) {
+      if (m.hp > 0) return;
+      G.player.kills += 1;
+      G.player.combo += 1;
+      G.player.comboTurns = 5;
+      let gainXp = m.xp;
+      if (G.player.combo > 1) gainXp = Math.floor(gainXp * (1 + Math.min(0.5, G.player.combo * 0.05)));
+      G.player.xp += gainXp;
+      let gold = rint(3, 8) + G.floor * 2;
+      if (G.player.classId === "rogue") gold = Math.floor(gold * 1.5);
+      G.player.gold += gold;
+      addLog(`击杀 ${m.name} +${gainXp}XP +${gold}G`, "#7fff9f");
+      for (let i = 0; i < 9; i++) {
+        addParticle(m.x + 0.5, m.y + 0.5, m.color, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, 0.55, 3);
+      }
+      if (!fromChain && chance(0.38 + totalStat("lucky") * 0.2)) {
+        const item = createItem(G.floor);
+        item.x = m.x;
+        item.y = m.y;
+        G.items.push(item);
+      }
+      levelCheck();
+    }
+
+    function levelCheck() {
+      const p = G.player;
+      while (p.xp >= p.xpNext) {
+        p.lv += 1;
+        p.xp -= p.xpNext;
+        p.xpNext = Math.floor(20 * Math.pow(1.5, p.lv - 1));
+        p.hpMax += 6;
+        p.mpMax += 3;
+        p.atkBase += 1;
+        p.defBase += 1;
+        p.hp = p.hpMax;
+        p.mp = p.mpMax;
+        addLog(`LEVEL UP! Lv.${p.lv} 全恢复`, "#ffd26a");
+        addText(p.x, p.y - 1, "LEVEL UP", "#ffd26a", true);
+        for (let i = 0; i < 12; i++) {
+          addParticle(p.x + 0.5, p.y + 0.5, "#ffd26a", (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, 0.6, 3);
+        }
+      }
+    }
+
+    function manhattan(a, b) {
+      return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    }
+
+    function tryMove(dx, dy) {
+      if (!G.started || G.animLock || G.scene !== "run") return;
+      const p = G.player;
+      const nx = p.x + dx;
+      const ny = p.y + dy;
+      if (!inMap(nx, ny) || G.map[ny][nx] === "#") return;
+      const m = monsterAt(nx, ny);
+      if (m) {
+        G.fx.lunge = 1;
+        const dmg = damageRoll(totalStat("atk"), m.def);
+        const result = doDamage(p, m, dmg);
+        addLog(`你攻击 ${m.name}${result.crit ? " [暴击]" : ""}`, "#ffcb84");
+        if (p.classId === "rogue" && p.poisonBlade > 0) {
+          m.status.push({ key: "poison", turns: 3, v: 3 + p.lv });
+          p.poisonBlade -= 1;
+          for (let i = 0; i < 6; i++) {
+            addParticle(m.x + 0.5, m.y + 0.5, "#66ff88", (Math.random() - 0.5) * 2.5, (Math.random() - 0.5) * 2.5, 0.4, 2);
+          }
+        }
+        if (m.hp <= 0) killMonster(m);
+        endPlayerTurn();
+        return;
+      }
+
+      p.x = nx;
+      p.y = ny;
+      const ev = eventAt(nx, ny);
+      if (ev) triggerEvent(ev);
+      endPlayerTurn();
+    }
+
+    function waitTurn() {
+      if (!G.started || G.animLock || G.scene !== "run") return;
+      addLog("你观察四周，稳住呼吸", "#a8b9dc");
+      endPlayerTurn();
+    }
+
+    function endPlayerTurn() {
+      G.animLock = true;
+      setTimeout(() => {
+        G.turn += 1;
+        processStatuses();
+        monsterTurn();
+        processBossLogic();
+        if (G.player.classId === "mage") G.player.mp = clamp(G.player.mp + 1, 0, G.player.mpMax);
+        if (G.player.comboTurns > 0) G.player.comboTurns -= 1;
+        if (G.player.comboTurns === 0) G.player.combo = 0;
+        computeFov();
+        if (G.player.hp <= 0) {
+          showResult(false);
+        }
+        G.animLock = false;
+      }, 180);
+    }
+
+    function processStatuses() {
+      for (const m of G.monsters) {
+        if (m.hp <= 0) continue;
+        m.status = m.status.filter((s) => {
+          if (s.key === "poison") {
+            m.hp -= s.v;
+            addText(m.x, m.y - 0.4, `-${s.v}`, "#6bf08f");
+            for (let i = 0; i < 3; i++) addParticle(m.x + 0.5, m.y + 0.5, "#6bf08f", (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.3, 2);
+          }
+          if (s.key === "burn") {
+            m.hp -= s.v;
+            addText(m.x, m.y - 0.4, `-${s.v}`, "#ff9b4f");
+          }
+          s.turns -= 1;
+          if (m.hp <= 0) killMonster(m);
+          return s.turns > 0;
+        });
+      }
+      G.player.buffs = G.player.buffs.filter((b) => ((b.turns -= 1), b.turns > 0));
+    }
+
+    function monsterTurn() {
+      const p = G.player;
+      for (const m of G.monsters) {
+        if (m.hp <= 0) continue;
+
+        const frz = m.status.find((s) => s.key === "freeze");
+        if (frz && chance(0.5)) continue;
+
+        const dist = manhattan(m, p);
+        if (dist === 1) {
+          const dmg = damageRoll(m.atk, totalStat("def"));
+          const r = doDamage(m, p, dmg);
+          if (!r.miss) addLog(`${m.name} 命中你 ${r.dmg}`, "#ff7f87");
+          continue;
+        }
+
+        const step = bfsStep(m.x, m.y, p.x, p.y, 12);
+        if (step) {
+          if (!monsterAt(step[0], step[1]) && !(step[0] === p.x && step[1] === p.y)) {
+            m.x = step[0];
+            m.y = step[1];
           }
         }
       }
     }
-  }
-}
 
-function bfsStep(sx,sy,tx,ty) {
-  const key = (x,y) => `${x},${y}`;
-  const blocked = new Set(G.monsters.filter(m=>m.alive&&!(m.x===sx&&m.y===sy)).map(m=>key(m.x,m.y)));
-  const queue = [[sx,sy,null]];
-  const vis = new Set([key(sx,sy)]);
-  const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-  while (queue.length) {
-    const [x,y,first] = queue.shift();
-    for (const [dx,dy] of dirs) {
-      const nx=x+dx, ny=y+dy, k=key(nx,ny);
-      if (vis.has(k) || !inBounds(nx,ny) || !G.tiles[ny][nx].walkable || blocked.has(k)) continue;
-      const step = first || [nx,ny];
-      if (nx===tx&&ny===ty) return step;
-      vis.add(k); queue.push([nx,ny,step]);
+    function bfsStep(sx, sy, tx, ty, max = 16) {
+      const q = [[sx, sy, null, 0]];
+      const seen = new Set([key(sx, sy)]);
+      const dir = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      while (q.length) {
+        const [x, y, first, d] = q.shift();
+        if (d > max) continue;
+        for (const [dx, dy] of dir) {
+          const nx = x + dx;
+          const ny = y + dy;
+          const k = key(nx, ny);
+          if (!inMap(nx, ny) || seen.has(k) || G.map[ny][nx] === "#") continue;
+          const f = first || [nx, ny];
+          if (nx === tx && ny === ty) return f;
+          if (!monsterAt(nx, ny)) q.push([nx, ny, f, d + 1]);
+          seen.add(k);
+        }
+      }
+      return null;
     }
-  }
-  return null;
-}
 
-// ══════════════════════════════════════════════════════
-//  PLAYER ACTIONS
-// ══════════════════════════════════════════════════════
-function movePlayer(dx, dy) {
-  if (G.dead || G.won) return;
-  const { player, tiles, monsters, items } = G;
-  const nx = player.x+dx, ny = player.y+dy;
-  if (!inBounds(nx,ny) || !tiles[ny][nx].walkable) return;
+    function processBossLogic() {
+      const boss = G.monsters.find((m) => m.hp > 0 && m.boss);
+      if (!boss) {
+        if (G.floor === MAX_FLOOR && G.scene === "run") showResult(true);
+        return;
+      }
 
-  const target = monsters.find(m=>m.alive&&m.x===nx&&m.y===ny);
-  if (target) {
-    const dmg = calcDmg(totalPwr(), target.def);
-    target.hp -= dmg;
-    if (target.hp <= 0) {
-      target.alive = false;
-      addMsg(`击败了 ${target.name}！+${target.xp}XP`, 'green');
-      player.xp += target.xp;
-      player.kills++;
-      const g = rndInt(1, G.depth*3);
-      player.gold += g;
-      addMsg(`  捡到 ${g} 金币`, 'yellow');
-      checkLevelUp();
-    } else {
-      addMsg(`攻击 ${target.name}，伤害 ${dmg} (HP:${target.hp})`, 'yellow');
-    }
-  } else {
-    player.x = nx; player.y = ny;
-    // auto-pickup gold
-    for (let i = items.length-1; i >= 0; i--) {
-      const it = items[i];
-      if (it.x===nx&&it.y===ny&&it.kind==='gold') {
-        player.gold += it.val;
-        addMsg(`拾取 ${it.val} 金币`, 'yellow');
-        items.splice(i,1);
+      if (boss.id === "boss_dragon") {
+        if (boss.hp < boss.hpMax / 2 && boss.phase === 1) {
+          boss.phase = 2;
+          addLog("骨龙怒吼！开始召唤骷髅", "#ffd27d");
+        }
+        boss.cooldown += 1;
+        if (boss.cooldown % 4 === 0 && boss.phase === 2) {
+          summonAround(boss, "skeleton", 2);
+        }
+        if (chance(0.35)) dragonBreath(boss);
+      }
+
+      if (boss.id === "boss_lord") {
+        if (boss.hp < boss.hpMax * 0.66 && boss.phase === 1) {
+          boss.phase = 2;
+          addLog("暗影领主分裂出幻影！", "#d194ff");
+          summonAround(boss, "shadow_clone", 2);
+        }
+        const clonesAlive = G.monsters.some((m) => m.id === "shadow_clone" && m.hp > 0);
+        if (boss.phase === 2 && !clonesAlive) {
+          boss.phase = 3;
+          boss.def = Math.max(2, boss.def - 2);
+          boss.atk += 4;
+          addLog("暗影领主进入狂暴！", "#ff8fcf");
+        }
+        if (chance(0.45)) shadowBolt(boss);
       }
     }
-  }
 
-  monsterTurn();
-  updateFov();
-  checkDeath();
-  render();
-  updateHud();
-}
-
-function doPickup() {
-  if (G.dead || G.won) return;
-  const { player, items } = G;
-  const found = items.filter(it=>it.x===player.x&&it.y===player.y&&it.kind!=='gold');
-  if (!found.length) { addMsg('这里没有物品', 'white'); renderMessages(); return; }
-  if (player.inventory.length >= 10) { addMsg('背包已满！', 'red'); renderMessages(); return; }
-  const it = found[0];
-  player.inventory.push(it);
-  items.splice(items.indexOf(it),1);
-  addMsg(`拾取了 ${it.name}`, 'green');
-  render(); renderMessages();
-}
-
-function doStairDown() {
-  if (G.dead || G.won) return;
-  const t = G.tiles[G.player.y][G.player.x];
-  if (t.type !== 'stair_down') { addMsg('这里没有下楼梯 (>)', 'white'); renderMessages(); return; }
-  if (G.depth >= MAX_DEPTH) {
-    G.won = true;
-    showWin(); return;
-  }
-  G.depth++;
-  loadFloor(G.depth);
-  addMsg(`你下到了第 ${G.depth} 层…危险增加！`, 'purple');
-  render(); updateHud(); renderMessages();
-}
-
-function doStairUp() {
-  if (G.dead || G.won) return;
-  const t = G.tiles[G.player.y][G.player.x];
-  if (t.type !== 'stair_up') { addMsg('这里没有上楼梯 (<)', 'white'); renderMessages(); return; }
-  if (G.depth <= 1) { addMsg('已在最顶层', 'white'); renderMessages(); return; }
-  G.depth--;
-  loadFloor(G.depth);
-  addMsg(`回到了第 ${G.depth} 层`, 'white');
-  render(); updateHud(); renderMessages();
-}
-
-function doWait() {
-  if (G.dead || G.won) return;
-  // Recover 1 HP if not in combat
-  const nearMonster = G.monsters.some(m=>m.alive&&Math.abs(m.x-G.player.x)+Math.abs(m.y-G.player.y)<=2);
-  if (!nearMonster && G.player.hp < G.player.maxHp) {
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp+1);
-    addMsg('你稍作休息，恢复了 1 HP', 'green');
-  }
-  monsterTurn();
-  updateFov();
-  checkDeath();
-  render(); updateHud(); renderMessages();
-}
-
-function checkLevelUp() {
-  const p = G.player;
-  while (p.xp >= p.xpNext) {
-    p.level++;
-    p.maxHp += 8; p.hp = p.maxHp;
-    p.basePwr += 2; p.baseDef += 1;
-    p.maxMp += 5; p.mp = p.maxMp;
-    p.xpNext = Math.round(p.xpNext * 1.6);
-    addMsg(`✨ 升级！Lv.${p.level}  HP全满 ATK+2 DEF+1`, 'cyan');
-  }
-}
-
-function checkDeath() {
-  if (G.player.hp <= 0) {
-    G.dead = true;
-    G.player.hp = 0;
-    showDeath();
-  }
-}
-
-function totalPwr() {
-  const p = G.player;
-  return p.basePwr + (p.weapon ? p.weapon.val : 0);
-}
-function totalDef() {
-  const p = G.player;
-  return p.baseDef + (p.armor ? p.armor.val : 0);
-}
-
-// ══════════════════════════════════════════════════════
-//  INVENTORY
-// ══════════════════════════════════════════════════════
-function showInventory() {
-  const p = G.player;
-  const list = document.getElementById('invList');
-  list.innerHTML = '';
-  if (!p.inventory.length) {
-    list.innerHTML = '<div style="color:var(--dim);text-align:center;padding:12px">背包是空的</div>';
-  }
-  for (let i = 0; i < p.inventory.length; i++) {
-    const it = p.inventory[i];
-    const isEq = it===p.weapon || it===p.armor;
-    const color = itemColor(it);
-    const div = document.createElement('div');
-    div.className = 'inv-item' + (isEq ? ' equipped' : '');
-    div.innerHTML = `
-      <span class="inv-glyph" style="color:${color}">${it.glyph}</span>
-      <div class="inv-info">
-        <div class="inv-name" style="color:${color}">${it.name}${isEq?' ✓':''}</div>
-        <div class="inv-desc">${itemDesc(it)}</div>
-      </div>
-      <div class="inv-actions">
-        <button class="inv-btn inv-btn-use"  onclick="invUse(${i});showInventory()">使用</button>
-        <button class="inv-btn inv-btn-drop" onclick="invDrop(${i});showInventory()">丢弃</button>
-      </div>
-    `;
-    list.appendChild(div);
-  }
-
-  const eq = document.getElementById('equippedInfo');
-  eq.innerHTML = `
-    <p>⚔ 武器：${p.weapon ? p.weapon.name + ` (+${p.weapon.val}ATK)` : '徒手'}</p>
-    <p>🛡 防具：${p.armor  ? p.armor.name  + ` (+${p.armor.val}DEF)` : '无甲'}</p>
-    <p>总ATK：${totalPwr()}　总DEF：${totalDef()}</p>
-  `;
-
-  document.getElementById('invModal').classList.add('show');
-}
-
-function closeInventory() {
-  document.getElementById('invModal').classList.remove('show');
-}
-
-function invUse(i) {
-  const p = G.player;
-  const it = p.inventory[i];
-  if (it.kind === 'potion_hp') {
-    const h = Math.min(it.val, p.maxHp - p.hp);
-    p.hp += h;
-    addMsg(`喝下 ${it.name}，恢复 ${h} HP`, 'green');
-    p.inventory.splice(i,1);
-  } else if (it.kind === 'potion_mp') {
-    const m = Math.min(it.val, p.maxMp - p.mp);
-    p.mp += m;
-    addMsg(`喝下 ${it.name}，恢复 ${m} MP`, 'cyan');
-    p.inventory.splice(i,1);
-  } else if (it.kind === 'weapon') {
-    if (p.weapon) p.inventory.push(p.weapon);
-    p.weapon = it; p.inventory.splice(i,1);
-    addMsg(`装备了 ${it.name} (+${it.val}ATK)`, 'yellow');
-  } else if (it.kind === 'armor') {
-    if (p.armor) p.inventory.push(p.armor);
-    p.armor = it; p.inventory.splice(i,1);
-    addMsg(`装备了 ${it.name} (+${it.val}DEF)`, 'yellow');
-  } else if (it.kind === 'scroll') {
-    // Lightning - hit nearest monster in FOV
-    const visible = G.monsters.filter(m=>m.alive && G.fov.has(`${m.x},${m.y}`));
-    if (visible.length) {
-      visible.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
-      const target = visible[0];
-      target.hp -= it.val;
-      if (target.hp<=0) { target.alive=false; p.xp+=target.xp; p.kills++; checkLevelUp(); }
-      addMsg(`⚡ 闪电击中 ${target.name}，造成 ${it.val} 伤害！`, 'cyan');
-    } else {
-      addMsg('附近没有可见的敌人', 'white');
+    function summonAround(center, id, n) {
+      const spot = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]];
+      let c = 0;
+      for (const [dx, dy] of spot) {
+        if (c >= n) break;
+        const x = center.x + dx;
+        const y = center.y + dy;
+        if (!inMap(x, y) || G.map[y][x] === "#" || monsterAt(x, y) || (x === G.player.x && y === G.player.y)) continue;
+        let m;
+        if (id === "shadow_clone") {
+          const b = MONSTER_DEF.shadow_clone;
+          m = { id, name: b.name, ch: b.ch, x, y, hp: b.hp, hpMax: b.hp, atk: b.atk, def: b.def, xp: b.xp, color: b.color, ai: "boss", status: [], boss: false, phase: 1, cooldown: 0 };
+        } else {
+          m = spawnMonster(G.floor, x, y);
+          m.id = id;
+          Object.assign(m, MONSTER_DEF[id]);
+          m.x = x; m.y = y;
+        }
+        G.monsters.push(m);
+        addText(x, y - 0.4, "召唤", "#ffd27d");
+        c += 1;
+      }
     }
-    p.inventory.splice(i,1);
-  }
-  updateHud(); render(); renderMessages();
-}
 
-function invDrop(i) {
-  const p = G.player;
-  const it = p.inventory[i];
-  if (it===p.weapon) p.weapon=null;
-  if (it===p.armor)  p.armor=null;
-  p.inventory.splice(i,1);
-  addMsg(`丢掉了 ${it.name}`, 'white');
-  renderMessages();
-}
+    function dragonBreath(boss) {
+      const p = G.player;
+      if (Math.abs(p.x - boss.x) > 5 && Math.abs(p.y - boss.y) > 5) return;
+      addLog("骨龙喷吐龙息！", "#ffb46a");
+      const dx = Math.sign(p.x - boss.x);
+      const dy = Math.sign(p.y - boss.y);
+      for (let i = 1; i <= 5; i++) {
+        const x = boss.x + dx * i;
+        const y = boss.y + dy * i;
+        if (!inMap(x, y) || G.map[y][x] === "#") break;
+        addParticle(x + 0.5, y + 0.5, "#ff9056", (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.45, 3);
+        if (x === p.x && y === p.y) doDamage(boss, p, 10, "fire");
+      }
+    }
 
-function itemDesc(it) {
-  if (it.kind==='potion_hp') return `恢复 ${it.val} HP`;
-  if (it.kind==='potion_mp') return `恢复 ${it.val} MP`;
-  if (it.kind==='weapon')    return `+${it.val} 攻击力`;
-  if (it.kind==='armor')     return `+${it.val} 防御力`;
-  if (it.kind==='scroll')    return `闪电伤害 ${it.val}`;
-  return '';
-}
+    function shadowBolt(boss) {
+      const p = G.player;
+      if (manhattan(boss, p) > 7) return;
+      addLog("暗影弹命中你", "#d49dff");
+      for (let i = 0; i < 7; i++) addParticle(p.x + 0.5, p.y + 0.5, "#c88cff", (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 0.4, 2);
+      doDamage(boss, p, 3 + Math.floor(G.floor / 2));
+    }
 
-function itemColor(it) {
-  const map = {'!r':'#ef5350','!c':'#26c6da','/':'#b0bec5','[':'#80cbc4','?':'#fff176','$':'#f5c518'};
-  return map[it.colorKey] || '#e0e0e0';
-}
+    function useSkill(idx) {
+      if (!G.started || G.animLock || G.scene !== "run") return;
+      const c = CLASSES.find((x) => x.id === G.player.classId);
+      const skill = c.skills[idx];
+      if (!skill) return;
+      if (G.player.mp < skill.mp) return toast("法力不足");
+      G.player.mp -= skill.mp;
 
-// ══════════════════════════════════════════════════════
-//  RENDERING (Canvas)
-// ══════════════════════════════════════════════════════
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-let camX = 0, camY = 0;
-let vpW = 0, vpH = 0;
-let cellsX = 0, cellsY = 0;
+      if (skill.type === "whirlwind") {
+        let hit = 0;
+        addLog("旋风斩！", "#9ecfff");
+        for (let i = 0; i < 20; i++) addParticle(G.player.x + 0.5, G.player.y + 0.5, "#9ecfff", (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, 0.3, 2);
+        for (const m of G.monsters) {
+          if (m.hp > 0 && manhattan(m, G.player) <= 1) {
+            const r = doDamage(G.player, m, damageRoll(totalStat("atk") + 2, m.def));
+            if (!r.miss) hit += 1;
+            if (m.hp <= 0) killMonster(m);
+          }
+        }
+        if (hit === 0) addLog("旋风斩落空", "#8ea4ce");
+      }
 
-function resizeCanvas() {
-  const vp = document.getElementById('viewport');
-  const w = vp.clientWidth  || window.innerWidth;
-  let h = vp.clientHeight;
-  if (!h) {
-    const hud      = document.getElementById('hud');
-    const msglog   = document.getElementById('msglog');
-    const controls = document.getElementById('controls');
-    const usedH = (hud?.offsetHeight||0) + (msglog?.offsetHeight||0) + (controls?.offsetHeight||0);
-    h = Math.max(100, window.innerHeight - usedH);
-  }
-  if (w === 0 || h === 0) return; // layout not ready yet
-  vpW = w; vpH = h;
-  canvas.width = vpW; canvas.height = vpH;
-  cellsX = Math.ceil(vpW / CELL) + 1;
-  cellsY = Math.ceil(vpH / CELL) + 1;
-  if (G.player) render();
-}
+      if (skill.type === "warcry") {
+        G.player.buffs.push({ key: "defup", v: 3, turns: 10 });
+        addLog("战吼提升防御", "#9ecfff");
+      }
 
-function updateCamera() {
-  const p = G.player;
-  camX = Math.max(0, Math.min(p.x - Math.floor(cellsX/2), Math.max(0, MAP_W - cellsX)));
-  camY = Math.max(0, Math.min(p.y - Math.floor(cellsY/2), Math.max(0, MAP_H - cellsY)));
-}
+      if (skill.type === "fireball") {
+        addLog("火球术！", "#ffb66a");
+        const target = nearestMonster(6);
+        if (target) {
+          const dx = Math.sign(target.x - G.player.x);
+          const dy = Math.sign(target.y - G.player.y);
+          for (let i = 1; i <= 3; i++) {
+            const x = G.player.x + dx * i;
+            const y = G.player.y + dy * i;
+            if (!inMap(x, y)) break;
+            addParticle(x + 0.5, y + 0.5, "#ff9a4c", (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.35, 2);
+            const m = monsterAt(x, y);
+            if (m) {
+              doDamage(G.player, m, 8 + G.player.lv, "fire");
+              blast(m.x, m.y, 1, 5 + Math.floor(G.player.lv / 2), "#ffb061");
+              break;
+            }
+          }
+        }
+      }
 
-function render() {
-  if (!G.tiles) return;
-  if (!vpW || !vpH) resizeCanvas();
-  if (!vpW || !vpH) return;
-  updateCamera();
-  ctx.fillStyle = '#0a0a0f';
-  ctx.fillRect(0,0,vpW,vpH);
+      if (skill.type === "freeze") {
+        addLog("冰冻术！", "#95d6ff");
+        blast(G.player.x, G.player.y, 2, 4 + Math.floor(G.player.lv / 2), "#95d6ff", "freeze");
+      }
 
-  const { tiles, monsters, items, player, fov } = G;
+      if (skill.type === "shadowstep") {
+        const target = nearestOpen(4);
+        if (!target) {
+          toast("无法瞬移");
+          G.player.mp += skill.mp;
+          return;
+        }
+        addLog("暗影步", "#bb90ff");
+        for (let i = 0; i < 10; i++) addParticle(G.player.x + 0.5, G.player.y + 0.5, "#9f7bff", (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 0.35, 2);
+        G.player.x = target.x;
+        G.player.y = target.y;
+        for (let i = 0; i < 10; i++) addParticle(G.player.x + 0.5, G.player.y + 0.5, "#9f7bff", (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 0.35, 2);
+      }
 
-  for (let sy = 0; sy < cellsY; sy++) {
-    for (let sx = 0; sx < cellsX; sx++) {
-      const tx = sx+camX, ty = sy+camY;
-      if (tx<0||tx>=MAP_W||ty<0||ty>=MAP_H) continue;
-      const tile = tiles[ty][tx];
-      const vis = fov.has(`${tx},${ty}`);
-      if (vis) tile.explored = true;
+      if (skill.type === "poisonblade") {
+        G.player.poisonBlade = 3;
+        addLog("毒刃激活(3次)", "#85e9a8");
+      }
 
-      if (!vis && !tile.explored) continue;
+      endPlayerTurn();
+    }
 
-      const px = sx*CELL, py = sy*CELL;
+    function nearestMonster(range) {
+      const visible = G.monsters.filter((m) => m.hp > 0 && manhattan(m, G.player) <= range);
+      visible.sort((a, b) => manhattan(a, G.player) - manhattan(b, G.player));
+      return visible[0];
+    }
 
-      // Tile background
-      if (vis) {
-        ctx.fillStyle = tile.type==='wall' ? '#2a2a3a' : '#14141e';
-        ctx.fillRect(px, py, CELL, CELL);
+    function nearestOpen(range) {
+      for (let d = range; d >= 1; d--) {
+        const candidates = [];
+        for (let dx = -d; dx <= d; dx++) {
+          for (let dy = -d; dy <= d; dy++) {
+            const x = G.player.x + dx;
+            const y = G.player.y + dy;
+            if (!inMap(x, y) || G.map[y][x] === "#" || monsterAt(x, y)) continue;
+            candidates.push({ x, y });
+          }
+        }
+        if (candidates.length) return pick(candidates);
+      }
+      return null;
+    }
+
+    function blast(cx, cy, r, dmg, color, status = "") {
+      for (const m of G.monsters) {
+        if (m.hp <= 0) continue;
+        if (Math.abs(m.x - cx) <= r && Math.abs(m.y - cy) <= r) {
+          doDamage(G.player, m, dmg, status === "freeze" ? "ice" : "fire");
+          if (status === "freeze") m.status.push({ key: "freeze", turns: 2, v: 0 });
+          if (m.hp <= 0) killMonster(m);
+        }
+      }
+      for (let i = 0; i < 24; i++) addParticle(cx + 0.5, cy + 0.5, color, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, 0.35, 2);
+    }
+
+    function pickup() {
+      if (G.scene !== "run") return;
+      const it = itemAt(G.player.x, G.player.y);
+      if (!it) return toast("脚下没有物品");
+      if (G.player.inventory.length >= 16) return toast("背包已满");
+      G.player.inventory.push(it);
+      G.items = G.items.filter((x) => x !== it);
+      addLog(`拾取 ${it.name} (${it.rarity.name})`, "#a6ffc6");
+    }
+
+    function openInventory() {
+      if (G.scene !== "run") return;
+      G.scene = "inventory";
+      renderInventory();
+      ui.inventory.classList.add("show");
+    }
+
+    function closeInventory() {
+      ui.inventory.classList.remove("show");
+      G.scene = "run";
+    }
+
+    function renderInventory() {
+      const p = G.player;
+      const w = p.equips.weapon ? `${p.equips.weapon.name}` : "无";
+      const a = p.equips.armor ? `${p.equips.armor.name}` : "无";
+      const c = p.equips.acc ? `${p.equips.acc.name}` : "无";
+      ui.eqInfo.textContent = `武器:${w}  护甲:${a}  饰品:${c}`;
+      ui.invList.innerHTML = "";
+      if (p.inventory.length === 0) ui.invList.innerHTML = `<div class='line muted'>背包为空</div>`;
+      p.inventory.forEach((it) => {
+        const div = document.createElement("div");
+        div.className = "inv-item";
+        const af = it.affix.map((x) => `${x.name}+${x.v}${x.key === "thunder" || x.key === "frost" ? "%" : ""}`).join(" / ");
+        div.innerHTML = `
+          <div class='row-space'><span class='${it.rarity.color}'>[${it.rarity.name}] ${it.name}</span><span>${it.type}</span></div>
+          <div class='line muted'>ATK+${it.atk} DEF+${it.def}</div>
+          <div class='line muted'>${af || "无词缀"}</div>
+          <div class='row-space'>
+            <button class='btn-sm' style='padding:5px 8px' data-act='equip'>装备</button>
+            <button class='btn-sm' style='padding:5px 8px' data-act='drop'>丢弃</button>
+          </div>
+        `;
+        div.querySelector("[data-act='equip']").onclick = () => equipItem(it);
+        div.querySelector("[data-act='drop']").onclick = () => dropItem(it);
+        ui.invList.appendChild(div);
+      });
+    }
+
+    function equipItem(it) {
+      const slot = it.type === "weapon" ? "weapon" : it.type === "armor" ? "armor" : "acc";
+      const old = G.player.equips[slot];
+      if (old) G.player.inventory.push(old);
+      G.player.equips[slot] = it;
+      G.player.inventory = G.player.inventory.filter((x) => x !== it);
+      addLog(`装备 ${it.name}`, "#b7d8ff");
+      renderInventory();
+    }
+
+    function dropItem(it) {
+      G.player.inventory = G.player.inventory.filter((x) => x !== it);
+      it.x = G.player.x;
+      it.y = G.player.y;
+      G.items.push(it);
+      addLog(`丢弃 ${it.name}`, "#9fb0d1");
+      renderInventory();
+    }
+
+    function useStairs() {
+      if (G.scene !== "run") return;
+      const tile = G.map[G.player.y][G.player.x];
+      if (tile !== ">" && tile !== "<") return toast("这里没有楼梯");
+      if (tile === ">") {
+        if (G.floor >= MAX_FLOOR) return;
+        G.floor += 1;
       } else {
-        ctx.fillStyle = tile.type==='wall' ? '#14141e' : '#0e0e16';
-        ctx.fillRect(px, py, CELL, CELL);
+        if (G.floor <= 1) return;
+        G.floor -= 1;
       }
+      addLog(`进入第 ${G.floor} 层`, "#d8c07a");
+      generateFloor(G.floor);
+      computeFov();
+    }
 
-      // Tile glyph
-      ctx.font = `${CELL-4}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const cx2 = px + CELL/2, cy2 = py + CELL/2;
-
-      if (tile.type === 'wall') {
-        ctx.fillStyle = vis ? '#4a4a5e' : '#222230';
-        ctx.fillText('#', cx2, cy2);
-      } else if (tile.type === 'stair_down') {
-        ctx.fillStyle = vis ? '#f5c518' : '#6a5800';
-        ctx.fillText('>', cx2, cy2);
-      } else if (tile.type === 'stair_up') {
-        ctx.fillStyle = vis ? '#f5c518' : '#6a5800';
-        ctx.fillText('<', cx2, cy2);
-      } else if (vis) {
-        ctx.fillStyle = '#1e1e2a';
-        ctx.fillText('.', cx2, cy2);
+    function triggerEvent(ev) {
+      if (ev.used) return;
+      ev.used = true;
+      if (ev.type === "treasure") return openEvent("宝箱房间", "你发现一个上锁宝箱", [
+        { text: "使用钥匙(如果有)", fn: () => { rewardChest(true); closeEvent(); } },
+        { text: "强行砸开(掉血)", fn: () => { G.player.hp = Math.max(1, G.player.hp - Math.floor(G.player.hpMax * 0.15)); rewardChest(false); closeEvent(); } },
+      ]);
+      if (ev.type === "trap") return openEvent("陷阱房间", "机关触发！但深处有宝物", [
+        { text: "冲过去", fn: () => { G.player.hp -= rint(4, 10) + G.floor; rewardRare(); closeEvent(); } },
+      ]);
+      if (ev.type === "event") {
+        const pickType = pick(["merchant", "fountain", "altar"]);
+        if (pickType === "merchant") {
+          const wares = [createItem(G.floor), createItem(G.floor), createItem(G.floor + 1)];
+          openEvent("神秘商人", "看看货？", wares.map((it) => ({
+            text: `${it.name} [${it.rarity.name}] - ${priceOf(it)}G`,
+            fn: () => {
+              const p = priceOf(it);
+              if (G.player.gold < p) return toast("金币不足");
+              G.player.gold -= p;
+              G.player.inventory.push(it);
+              addLog(`购买 ${it.name}`, "#90ffb2");
+            },
+          })).concat([{ text: "离开", fn: closeEvent }]));
+          return;
+        }
+        if (pickType === "fountain") return openEvent("恢复泉水", "清澈泉水泛着蓝光", [
+          { text: "饮用", fn: () => { G.player.hp = G.player.hpMax; G.player.mp = G.player.mpMax; addLog("状态恢复", "#9ad1ff"); closeEvent(); } },
+          { text: "离开", fn: closeEvent },
+        ]);
+        if (pickType === "altar") return openEvent("献血祭坛", "献祭 25% 当前生命，换取永久强化", [
+          {
+            text: "献祭",
+            fn: () => {
+              G.player.hp = Math.max(1, G.player.hp - Math.floor(G.player.hp * 0.25));
+              const buff = pick(["atk", "def", "hp"]);
+              if (buff === "atk") G.player.atkBase += 2;
+              if (buff === "def") G.player.defBase += 2;
+              if (buff === "hp") { G.player.hpMax += 10; G.player.hp += 10; }
+              addLog("祭坛回应了你的献祭", "#cfa3ff");
+              closeEvent();
+            },
+          },
+          { text: "拒绝", fn: closeEvent },
+        ]);
       }
     }
-  }
 
-  // Items
-  ctx.font = `bold ${CELL-4}px monospace`;
-  for (const it of items) {
-    if (!fov.has(`${it.x},${it.y}`)) continue;
-    const sx=(it.x-camX)*CELL, sy=(it.y-camY)*CELL;
-    if (sx<-CELL||sx>vpW||sy<-CELL||sy>vpH) continue;
-    ctx.fillStyle = itemColor(it);
-    ctx.fillText(it.glyph, sx+CELL/2, sy+CELL/2);
-  }
+    function rewardChest(hasKey) {
+      const item = createItem(G.floor + (hasKey ? 2 : 1));
+      item.rarity = hasKey ? pick([RARITY[2], RARITY[3], RARITY[4]]) : pick([RARITY[1], RARITY[2]]);
+      item.affix = randomAffix(item.rarity.affix);
+      G.player.inventory.push(item);
+      addLog(`获得宝箱奖励 ${item.name}[${item.rarity.name}]`, "#ffd88b");
+    }
 
-  // Monsters
-  for (const m of monsters) {
-    if (!m.alive || !fov.has(`${m.x},${m.y}`)) continue;
-    const sx=(m.x-camX)*CELL, sy=(m.y-camY)*CELL;
-    if (sx<-CELL||sx>vpW||sy<-CELL||sy>vpH) continue;
-    ctx.fillStyle = COLORS.monster[m.colorKey] || '#e84545';
-    ctx.fillText(m.glyph, sx+CELL/2, sy+CELL/2);
-    // HP bar
-    const hpFrac = m.hp/m.maxHp;
-    ctx.fillStyle = '#333';
-    ctx.fillRect(sx+1, sy, CELL-2, 3);
-    ctx.fillStyle = hpFrac>0.5?'#4caf50':hpFrac>0.25?'#f5c518':'#e84545';
-    ctx.fillRect(sx+1, sy, (CELL-2)*hpFrac, 3);
-  }
+    function rewardRare() {
+      const item = createItem(G.floor + 1);
+      item.rarity = pick([RARITY[2], RARITY[3]]);
+      item.affix = randomAffix(item.rarity.affix);
+      G.player.inventory.push(item);
+      addLog(`陷阱尽头获得 ${item.name}`, "#ffd88b");
+    }
 
-  // Player
-  const px = (player.x-camX)*CELL, py = (player.y-camY)*CELL;
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${CELL}px monospace`;
-  ctx.fillText('@', px+CELL/2, py+CELL/2);
-}
+    function priceOf(item) {
+      return 18 + G.floor * 6 + item.rarity.affix * 15;
+    }
 
-// ══════════════════════════════════════════════════════
-//  HUD & MESSAGES
-// ══════════════════════════════════════════════════════
-function updateHud() {
-  const p = G.player;
-  document.getElementById('barHp').style.width = `${100*p.hp/p.maxHp}%`;
-  document.getElementById('valHp').textContent = `${p.hp}/${p.maxHp}`;
-  document.getElementById('barMp').style.width = `${100*p.mp/p.maxMp}%`;
-  document.getElementById('valMp').textContent = `${p.mp}/${p.maxMp}`;
-  document.getElementById('barXp').style.width = `${100*p.xp/p.xpNext}%`;
-  document.getElementById('valLv').textContent = `${p.level}`;
-  document.getElementById('valAtk').textContent = totalPwr();
-  document.getElementById('valDef').textContent = totalDef();
-  document.getElementById('valGold').textContent = p.gold;
-  document.getElementById('floorBadge').textContent = `── 地下第 ${G.depth} 层 / ${MAX_DEPTH} 层 ──`;
-}
+    function openEvent(title, desc, actions) {
+      G.scene = "event";
+      ui.eventCard.innerHTML = `<h2>${title}</h2><div class='line'>${desc}</div>`;
+      actions.forEach((act) => {
+        const b = document.createElement("button");
+        b.className = "btn";
+        b.style.padding = "8px 10px";
+        b.style.marginTop = "8px";
+        b.textContent = act.text;
+        b.onclick = act.fn;
+        ui.eventCard.appendChild(b);
+      });
+      ui.eventOverlay.classList.add("show");
+    }
 
-const messages = [];
-function addMsg(text, color='white') {
-  messages.push({text, color});
-  if (messages.length > 40) messages.shift();
-  renderMessages();
-}
-function renderMessages() {
-  const log = document.getElementById('msglog');
-  const recent = messages.slice(-4);
-  log.innerHTML = recent.map(m => `<div class="msg msg-${m.color}">${m.text}</div>`).join('');
-  log.scrollTop = log.scrollHeight;
-}
+    function closeEvent() {
+      ui.eventOverlay.classList.remove("show");
+      G.scene = "run";
+    }
 
-// ══════════════════════════════════════════════════════
-//  GAME INIT
-// ══════════════════════════════════════════════════════
-function loadFloor(depth) {
-  const { tiles, rooms, monsters, items, startX, startY } = generateMap(depth);
-  G.tiles = tiles;
-  G.rooms = rooms;
-  G.monsters = monsters;
-  G.items = items;
-  G.player.x = startX;
-  G.player.y = startY;
-  G.fov = computeFov(tiles, startX, startY, FOV_R);
-}
+    function showResult(win) {
+      G.scene = "result";
+      const title = win ? "胜利" : "你已倒下";
+      const text = win ? "你征服了暗影地牢" : "深渊吞噬了你";
+      openEvent(title, `${text}\n楼层:${G.floor} 击杀:${G.player.kills} 金币:${G.player.gold} 等级:${G.player.lv}`, [
+        { text: "再来一局", fn: () => location.reload() },
+      ]);
+    }
 
-function updateFov() {
-  G.fov = computeFov(G.tiles, G.player.x, G.player.y, FOV_R);
-}
+    function updateHud() {
+      const p = G.player;
+      if (!p) return;
+      const hpRate = (p.hp / p.hpMax) * 100;
+      const mpRate = (p.mp / p.mpMax) * 100;
+      const xpRate = (p.xp / p.xpNext) * 100;
 
-function startGame() {
-  document.getElementById('titleScreen').style.display = 'none';
-  document.getElementById('deathScreen').classList.remove('show');
-  document.getElementById('winScreen').classList.remove('show');
+      ui.hpBar.style.width = `${clamp(hpRate, 0, 100)}%`;
+      if (p.hp < p.hpGhost) {
+        setTimeout(() => {
+          p.hpGhost = p.hp;
+          ui.hpGhost.style.width = `${clamp((p.hpGhost / p.hpMax) * 100, 0, 100)}%`;
+        }, 150);
+      } else {
+        p.hpGhost = p.hp;
+      }
+      ui.hpGhost.style.width = `${clamp((p.hpGhost / p.hpMax) * 100, 0, 100)}%`;
+      ui.mpBar.style.width = `${clamp(mpRate, 0, 100)}%`;
+      ui.xpBar.style.width = `${clamp(xpRate, 0, 100)}%`;
 
-  messages.length = 0;
+      ui.hpVal.textContent = `${Math.max(0, p.hp)}/${p.hpMax}`;
+      ui.mpVal.textContent = `${p.mp}/${p.mpMax}`;
+      ui.xpVal.textContent = `${p.xp}/${p.xpNext}`;
+      ui.lvVal.textContent = p.lv;
+      ui.floorVal.textContent = `${G.floor}/${MAX_FLOOR}`;
+      ui.atkVal.textContent = totalStat("atk");
+      ui.defVal.textContent = totalStat("def");
+      ui.critVal.textContent = `${Math.floor(totalStat("crit") * 100)}%`;
+      ui.goldVal.textContent = p.gold;
+    }
 
-  G = {
-    depth: 1,
-    dead: false, won: false,
-    player: {
-      x:0, y:0,
-      hp:30, maxHp:30,
-      mp:10, maxMp:10,
-      basePwr:5, baseDef:2,
-      level:1, xp:0, xpNext:20,
-      gold:0, kills:0,
-      inventory: [],
-      weapon: null, armor: null,
-    },
-    tiles: null, rooms: null, monsters: [], items: [],
-    fov: new Set(),
-  };
+    function render() {
+      const w = ui.game.clientWidth;
+      const h = ui.game.clientHeight;
+      const dpr = window.devicePixelRatio || 1;
+      ui.game.width = Math.floor(w * dpr);
+      ui.game.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
 
-  loadFloor(1);
-  addMsg('⚔ 欢迎来到地牢！用 > 下楼，G 拾取物品', 'yellow');
-  addMsg('消灭怪物获取经验，找到宝藏变强！', 'cyan');
-  resizeCanvas();
-  render();
-  updateHud();
-  renderMessages();
-}
+      if (!G.player) return;
 
-function showDeath() {
-  const p = G.player;
-  const el = document.getElementById('deathScreen');
-  document.getElementById('deathStats').innerHTML = `
-    <span>到达楼层</span><span>第 ${G.depth} 层</span>
-    <span>消灭敌人</span><span>${p.kills} 个</span>
-    <span>积累金币</span><span>${p.gold} 枚</span>
-    <span>达到等级</span><span>Lv.${p.level}</span>
-  `;
-  el.classList.add('show');
-}
+      const cellsX = Math.ceil(w / CELL);
+      const cellsY = Math.ceil(h / CELL);
+      G.camera.cellsX = cellsX;
+      G.camera.cellsY = cellsY;
 
-function showWin() {
-  const p = G.player;
-  const el = document.getElementById('winScreen');
-  document.getElementById('winStats').innerHTML = `
-    <span>消灭敌人</span><span>${p.kills} 个</span>
-    <span>积累金币</span><span>${p.gold} 枚</span>
-    <span>达到等级</span><span>Lv.${p.level}</span>
-    <span>最终ATK</span><span>${totalPwr()}</span>
-  `;
-  el.classList.add('show');
-}
+      let camX = clamp(G.player.x - Math.floor(cellsX / 2), 0, MAP_W - cellsX);
+      let camY = clamp(G.player.y - Math.floor(cellsY / 2), 0, MAP_H - cellsY);
+      G.camera.x = camX;
+      G.camera.y = camY;
 
-// ══════════════════════════════════════════════════════
-//  INPUT: Keyboard
-// ══════════════════════════════════════════════════════
-const KEY_DIRS = {
-  ArrowUp:[0,-1],w:[0,-1],W:[0,-1],
-  ArrowDown:[0,1],s:[0,1],S:[0,1],
-  ArrowLeft:[-1,0],a:[-1,0],A:[-1,0],
-  ArrowRight:[1,0],d:[1,0],D:[1,0],
-};
-document.addEventListener('keydown', e => {
-  if (e.key === 'i' || e.key === 'I') { showInventory(); return; }
-  if (e.key === 'g' || e.key === 'G') { doPickup(); return; }
-  if (e.key === '>') { doStairDown(); return; }
-  if (e.key === '<') { doStairUp(); return; }
-  if (e.key === '.') { doWait(); return; }
-  const dir = KEY_DIRS[e.key];
-  if (dir) { e.preventDefault(); movePlayer(dir[0], dir[1]); }
-});
+      for (let sy = 0; sy <= cellsY; sy++) {
+        for (let sx = 0; sx <= cellsX; sx++) {
+          const x = sx + camX;
+          const y = sy + camY;
+          if (!inMap(x, y)) continue;
+          const explored = G.explored[y][x];
+          const vis = G.visible.has(key(x, y));
+          if (!explored && !vis) continue;
 
-// ══════════════════════════════════════════════════════
-//  INPUT: D-Pad buttons
-// ══════════════════════════════════════════════════════
-document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
-  const [dx,dy] = btn.dataset.dir.split(',').map(Number);
-  let interval = null;
+          const tile = G.map[y][x];
+          const px = sx * CELL;
+          const py = sy * CELL;
+          if (tile === "#") ctx.fillStyle = vis ? "#2d3140" : "#141925";
+          else ctx.fillStyle = vis ? "#1a2030" : "#0f141f";
+          ctx.fillRect(px, py, CELL, CELL);
 
-  const start = (e) => {
-    e.preventDefault();
-    btn.classList.add('pressed');
-    movePlayer(dx, dy);
-    interval = setInterval(() => movePlayer(dx, dy), 120);
-  };
-  const stop = () => {
-    btn.classList.remove('pressed');
-    clearInterval(interval); interval = null;
-  };
+          if (tile === ">" || tile === "<") {
+            ctx.fillStyle = vis ? "#f0c75f" : "#715c2e";
+            ctx.font = "bold 16px monospace";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(tile, px + CELL / 2, py + CELL / 2 + 1);
+          }
+        }
+      }
 
-  btn.addEventListener('touchstart', start, {passive:false});
-  btn.addEventListener('touchend',   stop);
-  btn.addEventListener('touchcancel',stop);
-  btn.addEventListener('mousedown',  start);
-  btn.addEventListener('mouseup',    stop);
-  btn.addEventListener('mouseleave', stop);
-});
+      for (const it of G.items) {
+        if (!G.visible.has(key(it.x, it.y))) continue;
+        drawGlyph(it.x, it.y, "*", rarityColor(it.rarity.key), camX, camY);
+      }
 
-// ══════════════════════════════════════════════════════
-//  INPUT: Swipe on canvas
-// ══════════════════════════════════════════════════════
-let touchStart = null;
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-}, {passive:false});
-canvas.addEventListener('touchend', e => {
-  if (!touchStart) return;
-  const dx = e.changedTouches[0].clientX - touchStart.x;
-  const dy = e.changedTouches[0].clientY - touchStart.y;
-  touchStart = null;
-  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-  if (Math.abs(dx) > Math.abs(dy))
-    movePlayer(dx>0?1:-1, 0);
-  else
-    movePlayer(0, dy>0?1:-1);
-}, {passive:false});
+      for (const m of G.monsters) {
+        if (m.hp <= 0 || !G.visible.has(key(m.x, m.y))) continue;
+        const flash = G.fx.flashes.find((f) => f.target === m);
+        drawGlyph(m.x, m.y, m.ch, flash ? "#ffffff" : m.color, camX, camY);
+        drawMonsterHp(m, camX, camY);
+      }
 
-// ══════════════════════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════════════════════
-function rndInt(a, b) { return Math.floor(Math.random()*(b-a+1))+a; }
-function inBounds(x,y) { return x>=0&&x<MAP_W&&y>=0&&y<MAP_H; }
-function center(r) { return [Math.floor((r.x1+r.x2)/2), Math.floor((r.y1+r.y2)/2)]; }
-function rectsOverlap(a,b) { return a.x1<=b.x2&&a.x2>=b.x1&&a.y1<=b.y2&&a.y2>=b.y1; }
-function shuffle(arr) { for(let i=arr.length-1;i>0;i--){const j=rndInt(0,i);[arr[i],arr[j]]=[arr[j],arr[i]];} }
-function weightedChoice(arr, ws) {
-  const total = ws.reduce((a,b)=>a+b,0);
-  let r = Math.random()*total;
-  for (let i=0;i<arr.length;i++) { r-=ws[i]; if(r<=0) return arr[i]; }
-  return arr[arr.length-1];
-}
+      const pFlash = G.fx.flashes.find((f) => f.target === G.player);
+      const lungeDx = G.fx.lunge > 0 ? 4 : 0;
+      drawGlyph(G.player.x, G.player.y, "@", pFlash ? "#ffffff" : "#f8fbff", camX, camY, lungeDx, 0);
 
-// ══════════════════════════════════════════════════════
-//  BOOT
-// ══════════════════════════════════════════════════════
-function fixLayout() {
-  document.getElementById('app').style.height = window.innerHeight + 'px';
-  setTimeout(resizeCanvas, 50);
-}
-window.addEventListener('resize', () => { fixLayout(); });
-window.addEventListener('orientationchange', () => { setTimeout(fixLayout, 400); });
+      drawFx(camX, camY);
+      drawMinimap();
 
-// ResizeObserver fires AFTER the browser truly finishes layout,
-// so clientHeight is always correct — no timing hacks needed.
-let titleShown = false;
-new ResizeObserver(() => {
-  resizeCanvas();
-  if (!titleShown) {
-    titleShown = true;
-    document.getElementById('titleScreen').style.display = 'flex';
-  }
-}).observe(document.getElementById('viewport'));
+      if (G.fx.lunge > 0) G.fx.lunge -= 0.25;
+      updateHud();
+    }
 
-// Kick off layout on load
-window.addEventListener('load', fixLayout);
-</script>
+    function drawGlyph(x, y, ch, color, camX, camY, ox = 0, oy = 0) {
+      const px = (x - camX) * CELL;
+      const py = (y - camY) * CELL;
+      ctx.fillStyle = color;
+      ctx.font = "bold 16px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(ch, px + CELL / 2 + ox, py + CELL / 2 + oy + 1);
+    }
+
+    function drawMonsterHp(m, camX, camY) {
+      const px = (m.x - camX) * CELL + 2;
+      const py = (m.y - camY) * CELL + 1;
+      const w = CELL - 4;
+      const rate = clamp(m.hp / m.hpMax, 0, 1);
+      ctx.fillStyle = "#2a334a";
+      ctx.fillRect(px, py, w, 3);
+      ctx.fillStyle = rate > 0.5 ? "#67e396" : rate > 0.25 ? "#f5d06f" : "#ff6972";
+      ctx.fillRect(px, py, w * rate, 3);
+    }
+
+    function drawFx(camX, camY) {
+      const dt = 1 / 60;
+      for (const f of G.fx.flashes) f.t -= dt;
+      G.fx.flashes = G.fx.flashes.filter((f) => f.t > 0);
+
+      for (const p of G.fx.particles) {
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        const a = clamp(p.life / p.max, 0, 1);
+        const px = (p.x - camX) * CELL;
+        const py = (p.y - camY) * CELL;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(px, py, p.size, p.size);
+        ctx.globalAlpha = 1;
+      }
+      G.fx.particles = G.fx.particles.filter((p) => p.life > 0);
+
+      for (const t of G.fx.texts) {
+        t.life -= dt;
+        t.y -= dt * 1.2;
+        const alpha = clamp(t.life / t.max, 0, 1);
+        const px = (t.x - camX) * CELL + CELL / 2;
+        const py = (t.y - camY) * CELL + CELL / 2;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = t.color;
+        ctx.font = `${t.big ? "bold 18px" : "bold 14px"} monospace`;
+        ctx.textAlign = "center";
+        ctx.fillText(t.text, px, py);
+        ctx.globalAlpha = 1;
+      }
+      G.fx.texts = G.fx.texts.filter((t) => t.life > 0);
+
+      if (G.fx.shake > 0) {
+        const amp = G.fx.shakeAmp;
+        const x = (Math.random() - 0.5) * amp;
+        const y = (Math.random() - 0.5) * amp;
+        ui.cameraWrap.style.transform = `translate(${x}px, ${y}px)`;
+        G.fx.shake -= 1;
+      } else {
+        ui.cameraWrap.style.transform = "translate(0,0)";
+      }
+    }
+
+    function drawMinimap() {
+      if (!G.minimapOn) {
+        miniCtx.clearRect(0, 0, ui.mini.width, ui.mini.height);
+        return;
+      }
+      const dpr = window.devicePixelRatio || 1;
+      ui.mini.width = Math.floor(ui.mini.clientWidth * dpr);
+      ui.mini.height = Math.floor(ui.mini.clientHeight * dpr);
+      miniCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const w = ui.mini.clientWidth;
+      const h = ui.mini.clientHeight;
+      miniCtx.fillStyle = "rgba(0,0,0,0.8)";
+      miniCtx.fillRect(0, 0, w, h);
+      const sx = w / MAP_W;
+      const sy = h / MAP_H;
+      for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+          if (!G.explored[y][x]) continue;
+          miniCtx.fillStyle = G.map[y][x] === "#" ? "#232a38" : "#a8b2c7";
+          miniCtx.fillRect(x * sx, y * sy, Math.ceil(sx), Math.ceil(sy));
+          if (G.map[y][x] === ">" || G.map[y][x] === "<") {
+            miniCtx.fillStyle = "#f2cb6d";
+            miniCtx.fillRect(x * sx, y * sy, Math.ceil(sx), Math.ceil(sy));
+          }
+        }
+      }
+      const pulse = 1 + Math.sin(performance.now() * 0.008) * 0.35;
+      miniCtx.fillStyle = "#ffffff";
+      miniCtx.beginPath();
+      miniCtx.arc((G.player.x + 0.5) * sx, (G.player.y + 0.5) * sy, 2.2 * pulse, 0, Math.PI * 2);
+      miniCtx.fill();
+    }
+
+    function rarityColor(k) {
+      if (k === "common") return "#e7ebf7";
+      if (k === "uncommon") return "#69d58d";
+      if (k === "rare") return "#5aa2ff";
+      if (k === "epic") return "#b285ff";
+      return "#ffa13e";
+    }
+
+    function gameLoop() {
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function bindInput() {
+      const dirMap = {
+        ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+        w: [0, -1], W: [0, -1], s: [0, 1], S: [0, 1], a: [-1, 0], A: [-1, 0], d: [1, 0], D: [1, 0],
+      };
+      document.addEventListener("keydown", (e) => {
+        if (dirMap[e.key]) {
+          e.preventDefault();
+          tryMove(dirMap[e.key][0], dirMap[e.key][1]);
+          return;
+        }
+        if (e.key === "1") useSkill(0);
+        if (e.key === "2") useSkill(1);
+        if (e.key === "g" || e.key === "G") pickup();
+        if (e.key === "i" || e.key === "I") openInventory();
+        if (e.key === "m" || e.key === "M") toggleMinimap();
+        if (e.key === ".") waitTurn();
+        if (e.key === ">" || e.key === "<") useStairs();
+      });
+
+      document.querySelectorAll("[data-move]").forEach((el) => {
+        const [dx, dy] = el.dataset.move.split(",").map(Number);
+        const press = (ev) => {
+          ev.preventDefault();
+          el.classList.add("active-touch");
+          tryMove(dx, dy);
+        };
+        const release = () => el.classList.remove("active-touch");
+        el.addEventListener("touchstart", press, { passive: false });
+        el.addEventListener("touchend", release);
+        el.addEventListener("mousedown", press);
+        el.addEventListener("mouseup", release);
+      });
+
+      ui.game.addEventListener("touchstart", (e) => {
+        if (!G.started) return;
+        const t = e.touches[0];
+        G.swipeStart = { x: t.clientX, y: t.clientY };
+      }, { passive: false });
+
+      ui.game.addEventListener("touchend", (e) => {
+        if (!G.swipeStart) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - G.swipeStart.x;
+        const dy = t.clientY - G.swipeStart.y;
+        G.swipeStart = null;
+        if (Math.abs(dx) < 16 && Math.abs(dy) < 16) return;
+        if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 1 : -1, 0);
+        else tryMove(0, dy > 0 ? 1 : -1);
+      }, { passive: false });
+
+      ui.mini.addEventListener("click", toggleMinimap);
+    }
+
+    function toggleMinimap() {
+      G.minimapOn = !G.minimapOn;
+      toast(G.minimapOn ? "小地图开启" : "小地图关闭");
+    }
+
+    function startGame() {
+      G.started = true;
+      G.scene = "run";
+      ui.title.classList.remove("show");
+      G.floor = 1;
+      G.player = makePlayer();
+      G.log = [];
+      generateFloor(1);
+      computeFov();
+      addLog(`你选择了 ${G.player.className}，进入第1层`, "#f0c75f");
+      addLog("提示：打击感已强化，尽量连杀保持连击", "#95b6ff");
+    }
+
+    updateClassUI();
+    bindInput();
+    gameLoop();
+
+    window.startGame = startGame;
+    window.openInventory = openInventory;
+    window.closeInventory = closeInventory;
+    window.useStairs = useStairs;
+    window.pickup = pickup;
+    window.waitTurn = waitTurn;
+    window.useSkill = useSkill;
+    window.toggleMinimap = toggleMinimap;
+  </script>
 </body>
 </html>
