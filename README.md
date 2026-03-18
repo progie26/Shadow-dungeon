@@ -2,7 +2,7 @@
 
 High-playability roguelike dungeon crawler for **web and mobile browsers**.
 
-Live demo: https://progie26.github.io/shadow-dungeon-codex-20260318a/
+Live demo: https://progie26.github.io/shadow-dungeon/
 
 ## Highlights
 
