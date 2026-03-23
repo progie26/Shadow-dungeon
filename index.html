@@ -193,6 +193,135 @@
       padding: 16px;
     }
 
+    .title-card {
+      width: min(920px, 96vw);
+      background:
+        radial-gradient(circle at top right, rgba(240, 199, 95, 0.12), transparent 28%),
+        radial-gradient(circle at left center, rgba(120, 160, 255, 0.12), transparent 26%),
+        linear-gradient(180deg, rgba(22, 28, 42, 0.97) 0%, rgba(10, 14, 23, 0.98) 100%);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .title-card::before {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border: 1px solid rgba(240, 199, 95, 0.16);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    .title-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.95fr);
+      gap: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .title-main {
+      min-width: 0;
+    }
+
+    .title-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(116, 136, 180, 0.35);
+      background: rgba(11, 15, 24, 0.68);
+      color: #c8d3ee;
+      font-size: 11px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .title-copy {
+      max-width: 56ch;
+    }
+
+    .title-copy strong {
+      color: #f3d487;
+    }
+
+    .art-panel {
+      border: 1px solid #2f3950;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(19, 24, 36, 0.94) 0%, rgba(10, 13, 20, 0.94) 100%);
+      padding: 12px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .art-panel h3 {
+      color: #f0c75f;
+      font-size: 13px;
+      letter-spacing: 1.2px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .art-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .art-slot {
+      border: 1px solid #34405a;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #151c2b 0%, #0f1420 100%);
+      overflow: hidden;
+    }
+
+    .art-slot img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      display: block;
+      background: radial-gradient(circle at 50% 30%, #1f2638 0%, #0c1018 100%);
+      border-bottom: 1px solid #2d3650;
+    }
+
+    .art-slot.empty img {
+      display: none;
+    }
+
+    .art-slot.empty::before {
+      content: attr(data-role);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 4 / 3;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: #7d889f;
+      text-transform: uppercase;
+      border-bottom: 1px solid #2d3650;
+      background:
+        linear-gradient(135deg, rgba(240, 199, 95, 0.08), transparent 48%),
+        linear-gradient(180deg, #151c2b 0%, #0f1420 100%);
+    }
+
+    .art-slot-body {
+      padding: 8px;
+    }
+
+    .art-slot-title {
+      color: #e8edf9;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .art-slot-note {
+      color: #8b96ae;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
     h1 {
       color: var(--gold);
       letter-spacing: 2px;
@@ -216,6 +345,57 @@
       padding: 10px;
       background: #151b29;
       cursor: pointer;
+      overflow: hidden;
+    }
+
+    .class-portrait {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 1px solid #2e3a52;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      object-fit: cover;
+      display: block;
+      background: linear-gradient(180deg, #141a28 0%, #0e121d 100%);
+    }
+
+    .boss-card {
+      position: absolute;
+      left: 10px;
+      bottom: 76px;
+      width: 210px;
+      background: rgba(8, 10, 16, 0.82);
+      border: 1px solid #394560;
+      border-radius: 10px;
+      padding: 8px;
+      z-index: 6;
+      display: none;
+    }
+
+    .boss-card.show {
+      display: block;
+    }
+
+    .boss-card img {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #4a5571;
+      margin-bottom: 6px;
+      background: #0f1420;
+    }
+
+    .boss-card .name {
+      color: var(--gold);
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    .boss-card .tip {
+      color: #b7c2dd;
+      font-size: 11px;
+      margin-top: 4px;
     }
 
     .class-item.selected { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(240, 199, 95, 0.5) inset; }
@@ -274,6 +454,12 @@
       .class-grid { grid-template-columns: 1fr; }
       #miniWrap { width: 108px; height: 76px; }
       #act { grid-template-columns: repeat(2, 58px); }
+      .title-layout { grid-template-columns: 1fr; }
+      .art-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .art-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -306,6 +492,11 @@
       </div>
       <canvas id="miniWrap"></canvas>
       <div id="bossBanner"></div>
+      <div id="bossCard" class="boss-card">
+        <img id="bossPortrait" alt="boss portrait" />
+        <div id="bossName" class="name"></div>
+        <div id="bossTip" class="tip"></div>
+      </div>
       <div id="toast"></div>
     </div>
 
@@ -335,14 +526,24 @@
   </div>
 
   <div class="overlay show" id="titleOverlay">
-    <div class="card">
-      <h1>暗影地牢</h1>
-      <div class="line">高危深渊，八层试炼。你只有一次机会。</div>
-      <div class="line muted">战斗手感强化：震屏、浮字、爆裂粒子、技能特效、Boss 演出。</div>
-      <div class="class-grid" id="classGrid"></div>
-      <div class="row-space" style="margin-top:10px">
-        <button class="btn" style="padding:10px 14px" onclick="startGame()">开始冒险</button>
-        <span class="muted" style="font-size:12px">键盘: WASD/方向键, 1/2 技能, I 背包, G 拾取, M 地图</span>
+    <div class="card title-card">
+      <div class="title-layout">
+        <div class="title-main">
+          <div class="title-kicker">Shadow Dungeon / Noita-Inspired Build</div>
+          <h1>暗影地牢</h1>
+          <div class="line title-copy">高危深渊，八层试炼。你只有一次机会。<strong>现在使用可爱抽象的 SVG 符文小图腾</strong>，先统一界面气质，再逐步替换正式美术。</div>
+          <div class="line muted title-copy">战斗手感强化：震屏、浮字、爆裂粒子、技能特效、Boss 演出。环境系统强化：材质反应、副产物、法杖节点诊断。</div>
+          <div class="class-grid" id="classGrid"></div>
+          <div class="row-space" style="margin-top:10px">
+            <button class="btn" style="padding:10px 14px" onclick="startGame()">开始冒险</button>
+            <span class="muted" style="font-size:12px">键盘: WASD/方向键, 1/2 技能, I 背包, G 拾取, M 地图</span>
+          </div>
+        </div>
+        <div class="art-panel">
+          <h3>美术接入面板</h3>
+          <div class="line muted" style="margin-top:0">这里展示内置 SVG 图腾占位。后面如果要换正式美术，再按同角色语义替换即可。</div>
+          <div class="art-grid" id="enemyArtBoard"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -360,6 +561,8 @@
     <div class="card" id="eventCard"></div>
   </div>
 
+  <script src="src/noita-art.js"></script>
+  <script src="src/noita-core.js"></script>
   <script>
     const MAP_W = 60;
     const MAP_H = 40;
@@ -471,6 +674,20 @@
 
     const groundItems = ["短剑", "长剑", "重剑", "布甲", "锁甲", "龙鳞甲", "黑曜戒", "秘银戒", "骨牙坠饰"];
 
+    let ART_ASSETS = {
+      enabled: false,
+      classPortraits: {},
+      enemies: {},
+      bosses: {},
+    };
+    try {
+      if (window.NoitaArt) {
+        ART_ASSETS = window.NoitaArt.buildTotemArtManifest();
+      }
+    } catch (err) {
+      console.warn("NoitaArt manifest init failed", err);
+    }
+
     const ui = {
       game: document.getElementById("game"),
       mini: document.getElementById("miniWrap"),
@@ -497,6 +714,10 @@
       eventOverlay: document.getElementById("eventOverlay"),
       eventCard: document.getElementById("eventCard"),
       bossBanner: document.getElementById("bossBanner"),
+      bossCard: document.getElementById("bossCard"),
+      bossPortrait: document.getElementById("bossPortrait"),
+      bossName: document.getElementById("bossName"),
+      bossTip: document.getElementById("bossTip"),
       toast: document.getElementById("toast"),
     };
 
@@ -530,6 +751,11 @@
       minimapOn: true,
       swipeStart: null,
       turn: 0,
+      noita: {
+        routeMatrix: null,
+        materialSim: null,
+        wandCompile: null,
+      },
     };
 
     function rint(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
@@ -547,6 +773,121 @@
         if (t <= 0) return it;
       }
       return list[list.length - 1];
+    }
+
+    function mapTileToMaterial(tile) {
+      if (tile === "#") return "stone";
+      return "air";
+    }
+
+    function initNoitaP0() {
+      if (!window.NoitaCore) return;
+      const initial = Array.from({ length: MAP_H }, (_, y) =>
+        Array.from({ length: MAP_W }, (_, x) => mapTileToMaterial(G.map[y][x]))
+      );
+
+      const roomSeeds = [
+        { material: "oil", count: 28 },
+        { material: "water", count: 18 },
+        { material: "lava", count: 8 },
+      ];
+
+      for (const seed of roomSeeds) {
+        let placed = 0;
+        let guard = 0;
+        while (placed < seed.count && guard < seed.count * 60) {
+          guard += 1;
+          const x = rint(1, MAP_W - 2);
+          const y = rint(1, MAP_H - 2);
+          if (G.map[y][x] !== ".") continue;
+          if (x === G.player.x && y === G.player.y) continue;
+          initial[y][x] = seed.material;
+          placed += 1;
+        }
+      }
+
+      G.noita.routeMatrix = window.NoitaCore.buildRouteMatrix();
+      G.noita.materialSim = window.NoitaCore.createMaterialSystem({
+        width: MAP_W,
+        height: MAP_H,
+        initial,
+      });
+
+      G.noita.wandCompile = window.NoitaCore.compileWand({
+        mana: 120,
+        slots: [
+          { kind: "base", id: "firebolt" },
+          { kind: "modifier", id: "triple_cast" },
+          { kind: "trigger", id: "on_hit_cast", payload: [{ kind: "base", id: "spark" }] },
+        ],
+      }, { maxExpandedNodes: 24 });
+
+      if (G.floor === 1 && G.noita.wandCompile.ok) {
+        const route = G.noita.routeMatrix.mainline.map((r) => r.id).join(" -> ");
+        addLog(`Noita P0: 路线已装载 ${route}`, "#8fd6ff");
+        addLog(`法杖编译成功: 耗蓝 ${G.noita.wandCompile.castPlan.totalManaCost}`, "#c1a2ff");
+        addLog(`法杖节点: ${G.noita.wandCompile.diagnostics.expandedNodeCount}/${G.noita.wandCompile.diagnostics.maxExpandedNodes}`, "#9ec7ff");
+      } else if (G.floor === 1 && !G.noita.wandCompile.ok) {
+        addLog(`法杖编译失败: ${G.noita.wandCompile.error.code}`, "#ff9b9b");
+      }
+    }
+
+    function getMaterialAt(x, y) {
+      if (!G.noita.materialSim) return "air";
+      return G.noita.materialSim.get(x, y);
+    }
+
+    function setMaterialAt(x, y, material) {
+      if (!G.noita.materialSim) return;
+      G.noita.materialSim.set(x, y, material);
+    }
+
+    function runNoitaTick() {
+      if (!G.noita.materialSim) return;
+      const report = G.noita.materialSim.tick();
+      if (report.reactionsProcessed > 0 && chance(0.12)) {
+        addLog(`环境反应 ${report.reactionsProcessed} 次 / 副产物 ${report.byproductsCreated}`, "#ffbf7a");
+      }
+
+      const playerMat = getMaterialAt(G.player.x, G.player.y);
+      if (playerMat === "burning_oil" || playerMat === "lava") {
+        doDamage({ x: G.player.x, y: G.player.y }, G.player, 3, "fire");
+        addLog("你被环境灼烧", "#ff9a6e");
+      }
+    }
+
+    function drawMaterialOverlay(x, y, camX, camY) {
+      const mat = getMaterialAt(x, y);
+      if (mat === "air" || mat === "stone" || mat === "void") return;
+      const px = (x - camX) * CELL;
+      const py = (y - camY) * CELL;
+
+      if (mat === "oil") {
+        ctx.fillStyle = "rgba(70, 45, 20, 0.55)";
+      } else if (mat === "water") {
+        ctx.fillStyle = "rgba(85, 155, 255, 0.42)";
+      } else if (mat === "lava") {
+        ctx.fillStyle = "rgba(255, 110, 30, 0.58)";
+      } else if (mat === "burning_oil") {
+        ctx.fillStyle = "rgba(255, 130, 40, 0.62)";
+      } else if (mat === "fire") {
+        ctx.fillStyle = "rgba(255, 160, 70, 0.52)";
+      } else if (mat === "steam") {
+        ctx.fillStyle = "rgba(205, 230, 255, 0.45)";
+      } else if (mat === "smoke") {
+        ctx.fillStyle = "rgba(130, 135, 150, 0.4)";
+      } else if (mat === "toxic_smoke") {
+        ctx.fillStyle = "rgba(155, 220, 120, 0.45)";
+      } else if (mat === "toxic_water") {
+        ctx.fillStyle = "rgba(95, 190, 95, 0.5)";
+      } else if (mat === "charged_water") {
+        ctx.fillStyle = "rgba(100, 170, 255, 0.55)";
+      } else if (mat === "blood_steam") {
+        ctx.fillStyle = "rgba(220, 110, 115, 0.5)";
+      } else {
+        ctx.fillStyle = "rgba(180, 140, 255, 0.3)";
+      }
+      ctx.fillRect(px + 1, py + 1, CELL - 2, CELL - 2);
     }
 
     function addLog(text, color = "#d8e1fa") {
@@ -569,23 +910,90 @@
       setTimeout(() => (ui.bossBanner.style.display = "none"), 1250);
     }
 
+    function showBossCard(bossId) {
+      if (!ART_ASSETS.enabled) {
+        hideBossCard();
+        return;
+      }
+      const boss = ART_ASSETS.bosses[bossId];
+      if (!boss) {
+        ui.bossCard.classList.remove("show");
+        return;
+      }
+      ui.bossPortrait.removeAttribute("src");
+      ui.bossPortrait.src = boss.src;
+      ui.bossPortrait.onerror = () => {
+        ui.bossCard.classList.remove("show");
+      };
+      ui.bossName.textContent = boss.name;
+      ui.bossTip.textContent = boss.tip;
+      ui.bossCard.classList.add("show");
+    }
+
+    function hideBossCard() {
+      ui.bossCard.classList.remove("show");
+    }
+
+    function renderEnemyArtBoard() {
+      const host = document.getElementById("enemyArtBoard");
+      if (!host) return;
+      host.innerHTML = "";
+      const entries = Object.entries(ART_ASSETS.enemies);
+      for (const [key, asset] of entries) {
+        const slot = document.createElement("div");
+        slot.className = "art-slot" + (ART_ASSETS.enabled ? "" : " empty");
+        slot.dataset.role = key;
+        slot.innerHTML = `
+          <img alt='${asset.title} portrait' />
+          <div class='art-slot-body'>
+            <div class='art-slot-title'>${asset.title}</div>
+            <div class='art-slot-note'>${asset.note}</div>
+          </div>
+        `;
+        const img = slot.querySelector("img");
+        if (!ART_ASSETS.enabled) {
+          img.removeAttribute("src");
+        } else {
+          img.src = asset.src;
+          img.onerror = () => {
+            slot.classList.add("empty");
+            img.removeAttribute("src");
+          };
+          img.onload = () => {
+            slot.classList.remove("empty");
+          };
+        }
+        host.appendChild(slot);
+      }
+    }
+
     function updateClassUI() {
       ui.classGrid.innerHTML = "";
       for (const c of CLASSES) {
         const d = document.createElement("div");
         d.className = "class-item" + (G.selectedClass === c.id ? " selected" : "");
+        const portrait = ART_ASSETS.classPortraits[c.id];
         d.innerHTML = `
+          ${ART_ASSETS.enabled ? `<img class='class-portrait' alt='${c.name} portrait' />` : ""}
           <div class='row-space'><strong>${c.name}</strong><span class='muted'>${c.desc}</span></div>
           <div class='line'>HP ${c.hp} / MP ${c.mp} / ATK ${c.atk} / DEF ${c.def}</div>
           <div class='line'>技能: ${c.skills[0].name}(${c.skills[0].mp})、${c.skills[1].name}(${c.skills[1].mp})</div>
           <div class='line muted'>被动: ${c.passive}</div>
         `;
+        const img = d.querySelector(".class-portrait");
+        if (img) {
+          img.src = portrait;
+          img.onerror = () => {
+            img.style.display = "none";
+          };
+        }
         d.onclick = () => {
           G.selectedClass = c.id;
           updateClassUI();
         };
         ui.classGrid.appendChild(d);
       }
+      renderEnemyArtBoard();
     }
 
     function makePlayer() {
@@ -731,6 +1139,9 @@
       if (depth === 4 || depth === 8) {
         G.monsters.push(spawnBoss(depth, ex, ey - 2));
         showBossBanner(depth === 4 ? "骨龙" : "暗影领主");
+        showBossCard(depth === 4 ? "boss_dragon" : "boss_lord");
+      } else {
+        hideBossCard();
       }
 
       for (let i = 1; i < rooms.length; i++) {
@@ -760,6 +1171,8 @@
           });
         }
       }
+
+      initNoitaP0();
     }
 
     function carveRoom(r) {
@@ -1014,6 +1427,12 @@
       setTimeout(() => {
         G.turn += 1;
         processStatuses();
+        runNoitaTick();
+        if (G.player.hp <= 0) {
+          showResult(false);
+          G.animLock = false;
+          return;
+        }
         monsterTurn();
         processBossLogic();
         if (G.player.classId === "mage") G.player.mp = clamp(G.player.mp + 1, 0, G.player.mpMax);
@@ -1215,7 +1634,9 @@
             const x = G.player.x + dx * i;
             const y = G.player.y + dy * i;
             if (!inMap(x, y)) break;
+            if (G.map[y][x] === "#") break;
             addParticle(x + 0.5, y + 0.5, "#ff9a4c", (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0.35, 2);
+            setMaterialAt(x, y, "fire");
             const m = monsterAt(x, y);
             if (m) {
               doDamage(G.player, m, 8 + G.player.lv, "fire");
@@ -1543,6 +1964,8 @@
             ctx.textBaseline = "middle";
             ctx.fillText(tile, px + CELL / 2, py + CELL / 2 + 1);
           }
+
+          drawMaterialOverlay(x, y, camX, camY);
         }
       }
 
